@@ -1,10 +1,19 @@
-package org.cyber1.platoterm;
-
-/**
- * Created by thomc on 2/17/2018.
+/*
+ * Copyright (c) 2018. Cyber1.org
  */
 
+package org.cyber1.platoterm;
+
 public class PLATOTermConnection {
+
+    private String host;
+    private String port;
+
+    public PLATOTermConnection(String host, String port) {
+        this.host = host;
+        this.port = port;
+    }
+
     public String getHost() {
         return host;
     }
@@ -21,13 +30,14 @@ public class PLATOTermConnection {
         this.port = port;
     }
 
-    private String host;
-    private String port;
+    public static class Options {
 
-    public PLATOTermConnection(String host, String port) {
-        this.host = host;
-        this.port = port;
+        public TerminalType terminalType;
+
+        private enum TerminalType {
+            MODE_CLASSIC, MODE_ASCII
+        }
+
     }
-
 
 }
