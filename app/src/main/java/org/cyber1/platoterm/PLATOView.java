@@ -24,6 +24,7 @@ public class PLATOView extends View {
     private DisplayMetrics mDisplayMetrics;
     private RectF mRenderRect;
     private int drawingColor;
+    private PLATOFont mFont;
 
     public PLATOView(Context context) {
         super(context);
@@ -63,6 +64,7 @@ public class PLATOView extends View {
         }
 
         mRenderRect = new RectF();
+        mFont = new PLATOFont();
     }
 
     @Override
@@ -79,6 +81,7 @@ public class PLATOView extends View {
         int contentWidth = getWidth() - paddingLeft - paddingRight;
         int contentHeight = getHeight() - paddingTop - paddingBottom;
 
+        // TODO: scale to aspect ratio instead of naive stretch.
         mRenderRect.top = 0;
         mRenderRect.left = 0;
         mRenderRect.bottom = getDisplayMetrics().heightPixels;
@@ -170,5 +173,26 @@ public class PLATOView extends View {
             }
         }
     }
+
+    /**
+     * Erase the entire display.
+     */
+    public void erase() {
+        mBitmap.eraseColor(0);
+    }
+
+    /**
+     * Erase a block of the display.
+     *
+     * @param x1 Beginning X coordinate of erase (0-511)
+     * @param y1 Beginning Y coordinate of erase (0-511)
+     * @param x2 Ending X coordinate of erase (0-511)
+     * @param y2 Ending Y coordinate of erase (0-511)
+     */
+    public void erase(int x1, int y1, int x2, int y2) {
+        // TODO: implement selective erase(x1,y1,x2,y2)
+    }
+
+
 
 }
