@@ -4,8 +4,6 @@
 
 package org.cyber1.platoterm;
 
-import org.jetbrains.annotations.Contract;
-
 /**
  * Created by thomc on 2/17/2018.
  */
@@ -166,27 +164,28 @@ public class PLATOFont {
             0x0000, 0x0180, 0x0240, 0x0240, 0x0180, 0x0000, 0x0000, 0x0000, // dot prod
             0x0000, 0x0000, 0x0000, 0x0002, 0x0004, 0x0008, 0x0000, 0x0000, // cedilla
     };
-    private int[] plato_m23;
+    private int[] plato_m2;
+    private int[] plato_m3;
 
     public PLATOFont() {
-        this.plato_m23 = new int[128 * 8];
+        this.plato_m2 = new int[64 * 8];
+        this.plato_m3 = new int[64 * 8];
     }
 
-    @org.jetbrains.annotations.Contract(pure = true)
-    public static int[] getPlato_m0() {
+    public int[] getPlato_m0() {
         return plato_m0;
     }
 
-    @Contract(pure = true)
-    public static int[] getPlato_m1() {
+    public int[] getPlato_m1() {
         return plato_m1;
     }
 
-    public int[] getPlato_m23() {
-        return plato_m23;
+    public int[] getPlato_m2() {
+        return plato_m2;
     }
 
-    public void setPlato_m23(int[] plato_m23) {
-        this.plato_m23 = plato_m23;
+    public int[] getPlato_m3() {
+        return plato_m3;
     }
+
 }

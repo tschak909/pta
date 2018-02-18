@@ -23,8 +23,15 @@ public class PLATOView extends View {
     private Bitmap mBitmap;
     private DisplayMetrics mDisplayMetrics;
     private RectF mRenderRect;
-    private int drawingColor;
-    private PLATOFont mFont;
+    private int drawingColorFG;
+    private int drawingColorBG;
+    private boolean boldWritingMode;
+    private int[] currentFont;
+    private boolean verticalWritingMode;
+    private PlatoRAM ram;
+    private boolean modeXOR;
+    private PLATOFont mFonts;
+
 
     public PLATOView(Context context) {
         super(context);
@@ -41,12 +48,68 @@ public class PLATOView extends View {
         init(attrs, defStyle);
     }
 
-    public int getDrawingColor() {
-        return drawingColor;
+    public boolean isBoldWritingMode() {
+        return boldWritingMode;
     }
 
-    public void setDrawingColor(int drawingColor) {
-        this.drawingColor = drawingColor;
+    public void setBoldWritingMode(boolean boldWritingMode) {
+        this.boldWritingMode = boldWritingMode;
+    }
+
+    public int[] getCurrentFont() {
+        return currentFont;
+    }
+
+    public void setCurrentFont(int[] currentFont) {
+        this.currentFont = currentFont;
+    }
+
+    public boolean isVerticalWritingMode() {
+        return verticalWritingMode;
+    }
+
+    public void setVerticalWritingMode(boolean verticalWritingMode) {
+        this.verticalWritingMode = verticalWritingMode;
+    }
+
+    public PlatoRAM getRam() {
+        return ram;
+    }
+
+    public void setRam(PlatoRAM ram) {
+        this.ram = ram;
+    }
+
+    public boolean isModeXOR() {
+        return modeXOR;
+    }
+
+    public void setModeXOR(boolean modeXOR) {
+        this.modeXOR = modeXOR;
+    }
+
+    public int getDrawingColorBG() {
+        return drawingColorBG;
+    }
+
+    public void setDrawingColorBG(int drawingColorBG) {
+        this.drawingColorBG = drawingColorBG;
+    }
+
+    public PLATOFont getFonts() {
+        return mFonts;
+    }
+
+    public void setFonts(PLATOFont Font) {
+        this.mFonts = Font;
+    }
+
+    public int getDrawingColorFG() {
+        return drawingColorFG;
+    }
+
+    public void setDrawingColorFG(int dc) {
+        this.drawingColorFG = dc;
     }
 
     public DisplayMetrics getDisplayMetrics() {
@@ -64,7 +127,7 @@ public class PLATOView extends View {
         }
 
         mRenderRect = new RectF();
-        mFont = new PLATOFont();
+        setFonts(new PLATOFont());
     }
 
     @Override
@@ -101,18 +164,22 @@ public class PLATOView extends View {
      */
     public void setPoint(int x, int y, int color, boolean bXOR) {
         int newColor;
+
+        x = x & 0x1FF;
+        y = y & 0x1FF ^ 0x1FF; // Flip vertical axes.
+
         if (bXOR) {
             int prevColor = mBitmap.getPixel(x, y);
             newColor = prevColor ^ color;
         } else {
             newColor = color;
         }
-        if ((x > 0 && x < mBitmap.getWidth()) || (y > 0 && y < mBitmap.getHeight()))
-            mBitmap.setPixel(x, y, newColor);
+
+        mBitmap.setPixel(x, y, newColor);
     }
 
     /**
-     * Plot line using current drawingColor
+     * Plot line using current drawingColorFG
      *
      * @param x1 Beginning X coordinate of line (0-511)
      * @param y1 Beginning Y coordinate of line (0-511)
@@ -143,7 +210,7 @@ public class PLATOView extends View {
         dy <<= 1;
 
         // Draw first point
-        setPoint(x1, y1, getDrawingColor(), false);
+        setPoint(x1, y1, getDrawingColorFG(), false);
 
         // Check for shallow line
         if (dx > dy) {
@@ -155,7 +222,7 @@ public class PLATOView extends View {
                 }
                 x1 += sx;
                 fraction += dy;
-                setPoint(x1, y1, getDrawingColor(), false);
+                setPoint(x1, y1, getDrawingColorFG(), false);
 
             }
         }
@@ -169,7 +236,7 @@ public class PLATOView extends View {
                 }
                 y1 += sy;
                 fraction += dx;
-                setPoint(x1, y1, getDrawingColor(), false);
+                setPoint(x1, y1, getDrawingColorFG(), false);
             }
         }
     }
@@ -180,6 +247,7 @@ public class PLATOView extends View {
     public void erase() {
         mBitmap.eraseColor(0);
     }
+
 
     /**
      * Erase a block of the display.
@@ -193,6 +261,96 @@ public class PLATOView extends View {
         // TODO: implement selective erase(x1,y1,x2,y2)
     }
 
+    /**
+     * Draw character onto canvas.
+     *
+     * @param x       X coordinate to place text (0-511)
+     * @param y       Y coordinate to place text (0-511)
+     * @param charset Character set to choose (0, 1, 2, 3)
+     * @param charnum Character to select
+     * @param autobs  Automatic backspace?
+     */
+    public void drawChar(int x, int y, int charset, int charnum, boolean autobs) {
 
+        // Save colors here so we can swap if needed for inverse video.
+        int fgcolor = getDrawingColorFG();
+        int bgcolor =getDrawingColorBG();
 
+        // Drawing indexes
+        int i = 0, j = 0;
+
+        // Current Char being drawn.
+        int currentChar = 0;
+        int charindex = 0;
+
+        // Current X and Y position (initially at origin.)
+        int cx = x, cy = y;
+
+        switch (charset) {
+            case 0:
+                setCurrentFont(getFonts().getPlato_m0());
+                break;
+            case 1:
+                setCurrentFont(getFonts().getPlato_m1());
+                break;
+            case 2:
+                setCurrentFont(getFonts().getPlato_m2());
+                break;
+            case 3:
+                setCurrentFont(getFonts().getPlato_m3());
+                break;
+        }
+
+        if (modeXOR || (getRam().getWeMode() == 1))   // Inverse text.
+        {
+            // Swap colors if we're asked to do inverse video.
+            fgcolor = getDrawingColorBG();
+            bgcolor = getDrawingColorFG();
+        }
+
+        // Select the current character
+        charindex = charnum * 8;
+
+        // Set current x and y positions to origin.
+
+        // Draw the character onto the bitmap
+        for (j = 0; j < 8; j++) {
+            currentChar = getCurrentFont()[charindex];
+            for (i = 0; i < 16; i++) {
+                // If Add offsets to origin. If vertical, flip the axes.
+                if (isVerticalWritingMode()) {
+                    cx = y + i;
+                    cy = x + j;
+                } else {
+                    cx = x + j;
+                    cy = y + i;
+                }
+
+                if ((currentChar & 1) == 0) // Blank pixel
+                {
+                    // Background, do we erase it?
+                    if ((getRam().getMode() & 2) == 0) {
+                        // Yes. blit the background color.
+                        setPoint(cx, cy, bgcolor, false);
+                        if (isBoldWritingMode())    // Bold? you need three more pixels blit.
+                        {
+                            setPoint(cx + 1, y, bgcolor, false);
+                            setPoint(cx, (isVerticalWritingMode() ? cy - 1 : cy + 1), bgcolor, false);
+                            setPoint(cx + 1, (isVerticalWritingMode() ? cy - 1 : cy + 1), bgcolor, false);
+                        }
+                    }
+                } else {
+                    // non-blank pixel
+                    setPoint(cx, cy, fgcolor, false);
+                    if (isBoldWritingMode()) {
+                        setPoint(cx + 1, y, fgcolor, false);
+                        setPoint(cx, (isVerticalWritingMode() ? cy - 1 : cy + 1), fgcolor, isModeXOR());
+                        setPoint(cx + 1, (isVerticalWritingMode() ? cy - 1 : cy + 1), fgcolor, isModeXOR());
+                    }
+                }
+                currentChar >>= 1; // Get next bit.
+            }
+            charindex++;
+        }
+    }
 }
