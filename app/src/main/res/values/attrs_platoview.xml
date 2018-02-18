@@ -1,3 +1,7 @@
+<!--
+  ~ Copyright (c) 2018. Cyber1.org
+  -->
+
 <resources>
     <declare-styleable name="PLATOView">
         <attr name="exampleString" format="string" />

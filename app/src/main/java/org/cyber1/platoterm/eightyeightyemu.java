@@ -1,13 +1,8 @@
-package org.cyber1.platoterm;
-
-import android.util.Log;
-
-import java.util.Arrays;
-
-/**
- * Created by thomc on 2/16/2018.
+/*
+ * Copyright (c) 2018. Cyber1.org
  */
 
+package org.cyber1.platoterm;
 
 public class eightyeightyemu {
     // There was code in here, but I've deleted it

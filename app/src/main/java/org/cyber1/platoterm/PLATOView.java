@@ -7,7 +7,6 @@ package org.cyber1.platoterm;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -72,9 +71,6 @@ public class PLATOView extends View {
         int contentHeight = getHeight() - paddingTop - paddingBottom;
 
 
-        for (int i = 0; i < 512; i++) {
-            mBitmap.setPixel(i, i, Color.RED);
-        }
 
         mRenderRect.top = 0;
         mRenderRect.left = 0;

@@ -1,8 +1,11 @@
+/*
+ * Copyright (c) 2018. Cyber1.org
+ */
+
 apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "26.0.1"
     defaultConfig {
         applicationId "org.cyber1.platoterm"
         minSdkVersion 21
