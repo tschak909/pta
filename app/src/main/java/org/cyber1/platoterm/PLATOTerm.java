@@ -46,6 +46,20 @@ public class PLATOTerm extends AppCompatActivity {
             }
         }
     };
+    /**
+     * Touch listener to use for in-layout UI controls to delay hiding the
+     * system UI. This is to prevent the jarring behavior of controls going away
+     * while interacting with activity UI.
+     */
+    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            if (AUTO_HIDE) {
+                delayedHide(AUTO_HIDE_DELAY_MILLIS);
+            }
+            return false;
+        }
+    };
     private PLATOView mContentView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -70,20 +84,6 @@ public class PLATOTerm extends AppCompatActivity {
         @Override
         public void run() {
             hide();
-        }
-    };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
         }
     };
     private PlatoRAM ram;
@@ -112,6 +112,7 @@ public class PLATOTerm extends AppCompatActivity {
         // Make view aware of terminal RAM
         ram = new PlatoRAM();
         mContentView.setRam(ram);
+        mContentView.setModeXOR(false);
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
@@ -157,11 +158,16 @@ public class PLATOTerm extends AppCompatActivity {
         mContentView.setVerticalWritingMode(true);
 
         mContentView.drawChar(128, 128, 0, 22, false);
-        mContentView.drawChar(128 + 8, 128, 0, 5, false);
-        mContentView.drawChar(128 + 16, 128, 0, 3, false);
+        mContentView.drawChar(128 + 16, 128, 0, 5, false);
+        mContentView.drawChar(128 + 32, 128, 0, 3, false);
 
+        mContentView.setVerticalWritingMode(false);
 
-        mContentView.setVerticalWritingMode(true);
+        mContentView.setBoldWritingMode(true);
+
+        mContentView.drawChar(192, 192, 0, 1, false);
+
+        mContentView.setBoldWritingMode(false);
 
     }
 

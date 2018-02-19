@@ -274,10 +274,10 @@ public class PLATOView extends View {
 
         // Save colors here so we can swap if needed for inverse video.
         int fgcolor = getDrawingColorFG();
-        int bgcolor =getDrawingColorBG();
+        int bgcolor = getDrawingColorBG();
 
         // Drawing indexes
-        int i = 0, j = 0;
+        int i = 0, j = 0, saveY = 0, dx = 0, dy = 0, sdy = 0;
 
         // Current Char being drawn.
         int currentChar = 0;
@@ -285,6 +285,19 @@ public class PLATOView extends View {
 
         // Current X and Y position (initially at origin.)
         int cx = x, cy = y;
+
+        if (isVerticalWritingMode()) {
+            cx = y;
+            cy = x;
+        }
+        saveY = cy;
+        dx = dy = (isBoldWritingMode() ? 2 : 1);
+        sdy = 1;
+
+        if (isVerticalWritingMode()) {
+            sdy = -1;
+            dy = -dy;
+        }
 
         switch (charset) {
             case 0:
@@ -315,42 +328,39 @@ public class PLATOView extends View {
 
         // Draw the character onto the bitmap
         for (j = 0; j < 8; j++) {
+            x = cx;
+            cy = saveY;
             currentChar = getCurrentFont()[charindex];
             for (i = 0; i < 16; i++) {
-                // If Add offsets to origin. If vertical, flip the axes.
-                if (isVerticalWritingMode()) {
-                    cx = y + i;
-                    cy = x + j;
-                } else {
-                    cx = x + j;
-                    cy = y + i;
-                }
-
-                if ((currentChar & 1) == 0) // Blank pixel
+                y = cy;
+                if ((currentChar & 1) == 0)
                 {
-                    // Background, do we erase it?
+                    // Blank pixel, background do we erase?
                     if ((getRam().getMode() & 2) == 0) {
-                        // Yes. blit the background color.
-                        setPoint(cx, cy, bgcolor, false);
-                        if (isBoldWritingMode())    // Bold? you need three more pixels blit.
-                        {
-                            setPoint(cx + 1, y, bgcolor, false);
-                            setPoint(cx, (isVerticalWritingMode() ? cy - 1 : cy + 1), bgcolor, false);
-                            setPoint(cx + 1, (isVerticalWritingMode() ? cy - 1 : cy + 1), bgcolor, false);
+                        // Yes, blit the background color.
+                        setPoint(x, y, bgcolor, isModeXOR());
+                        if (isBoldWritingMode()) {
+                            setPoint(x + 1, y, bgcolor, false);
+                            setPoint(x, y + sdy, bgcolor, false);
+                            setPoint(x + 1, y + sdy, bgcolor, false);
                         }
                     }
                 } else {
-                    // non-blank pixel
-                    setPoint(cx, cy, fgcolor, false);
+                    // Not blank pixel, blit the foreground color.
+                    setPoint(x, y, fgcolor, isModeXOR());
                     if (isBoldWritingMode()) {
-                        setPoint(cx + 1, y, fgcolor, false);
-                        setPoint(cx, (isVerticalWritingMode() ? cy - 1 : cy + 1), fgcolor, isModeXOR());
-                        setPoint(cx + 1, (isVerticalWritingMode() ? cy - 1 : cy + 1), fgcolor, isModeXOR());
+                        setPoint(x + 1, y, fgcolor, isModeXOR());
+                        setPoint(x, y + sdy, fgcolor, isModeXOR());
+                        setPoint(x + 1, y + sdy, fgcolor, isModeXOR());
                     }
                 }
-                currentChar >>= 1; // Get next bit.
+                currentChar >>= 1;
+                cy += dy;
+                y = cy;
             }
             charindex++;
+            cx += dx;
         }
+
     }
 }
