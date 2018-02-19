@@ -258,7 +258,36 @@ public class PLATOView extends View {
      * @param y2 Ending Y coordinate of erase (0-511)
      */
     public void erase(int x1, int y1, int x2, int y2) {
-        // TODO: implement selective erase(x1,y1,x2,y2)
+        int t;
+        int x, y;
+        int currentColor;
+
+        if (x1 > x2) {
+            t = x1;
+            x1 = x2;
+            x2 = t;
+        }
+        if (y1 > y2) {
+            t = y1;
+            y1 = y2;
+            y2 = t;
+        }
+
+        if (isModeXOR() || (getRam().getWeMode() & 1) == 1) {
+            // mode rewrite or write
+            currentColor = getDrawingColorFG();
+        } else {
+            // mode inverse or erase
+            currentColor = getDrawingColorBG();
+        }
+
+        for (y = y1; y <= y2; y++) {
+            for (x = x1; x <= x2; x++) {
+                setPoint(x, y, currentColor, isModeXOR());
+            }
+        }
+        
+        // todo: implement textmap.
     }
 
     /**
