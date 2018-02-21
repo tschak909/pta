@@ -13,6 +13,8 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.util.CircularArray;
 import android.util.Log;
 
+import org.jetbrains.annotations.Contract;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,11 +22,14 @@ import java.net.Socket;
 
 public class PLATONetworkService extends Service {
     private static final int BUFFER_SIZE = 8192;
+    private static final String DEFAULT_HOST = "cyberserv.org";
+    private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
     private InputStream is;
     private OutputStream os;
     private Socket mSocket;
-    private CircularArray<Byte> fifo;
+    private CircularArray<Byte> fromFIFO;   // Data FROM PLATO
+    private CircularArray<Byte> toFIFO;     // Data TO PLATO
     private boolean mRunning = false;
     private Runnable serviceThread = new Runnable() {
 
@@ -39,12 +44,37 @@ public class PLATONetworkService extends Service {
     public PLATONetworkService() {
     }
 
-    private CircularArray<Byte> getFifo() {
-        return fifo;
+    public InputStream getIs() {
+        return is;
     }
 
-    private void setFifo(CircularArray<Byte> fifo) {
-        this.fifo = fifo;
+    public void setIs(InputStream is) {
+        this.is = is;
+    }
+
+    public OutputStream getOs() {
+        return os;
+    }
+
+    public void setOs(OutputStream os) {
+        this.os = os;
+    }
+
+    public Socket getSocket() {
+        return mSocket;
+    }
+
+    public void setSocket(Socket mSocket) {
+        this.mSocket = mSocket;
+    }
+
+    public CircularArray<Byte> getToFIFO() {
+        return toFIFO;
+    }
+
+    @Contract(pure = true)
+    private CircularArray<Byte> getFromFIFO() {
+        return fromFIFO;
     }
 
     public boolean isRunning() {
@@ -58,7 +88,8 @@ public class PLATONetworkService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        fifo = new CircularArray<Byte>(8192);
+        fromFIFO = new CircularArray<>(BUFFER_SIZE);
+        toFIFO = new CircularArray<>(BUFFER_SIZE);
         new Thread(serviceThread).start();
         Notification notification = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -75,9 +106,9 @@ public class PLATONetworkService extends Service {
 
     public void connectToPLATO(String host, int ProtocolMode) {
         try {
-            mSocket = new Socket(host, ProtocolMode);
-            is = mSocket.getInputStream();
-            os = mSocket.getOutputStream();
+            setSocket(new Socket(host, ProtocolMode));
+            setIs(getSocket().getInputStream());
+            setOs(getSocket().getOutputStream());
         } catch (IOException e) {
             Log.e("PLATOTerm", "TCP Error: ", e);
         }
@@ -93,13 +124,18 @@ public class PLATONetworkService extends Service {
         setRunning(true);
         while (isRunning()) {
             try {
-                if (is.available() > 0) {
-                    getFifo().addLast((byte) is.read());
+                // Fill up the input FIFO
+                if (getIs().available() > 0) {
+                    getFromFIFO().addLast((byte) is.read());
                 }
-                // Silly, but looking to see if the service is behaving.
-                if (!getFifo().isEmpty()) {
-                    Log.i("PlatoTERM", "Received: " + String.valueOf(getFifo().popLast()));
+
+                // Drain the output FIFO
+                if (!getToFIFO().isEmpty()) {
+                    for (int i = 0; i < getToFIFO().size(); i++) {
+                        getOs().write(getToFIFO().popLast());
+                    }
                 }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -107,7 +143,7 @@ public class PLATONetworkService extends Service {
     }
 
     public void start() {
-        connectToPLATO("cyberserv.org", 8005);
+        connectToPLATO(DEFAULT_HOST, PROTOCOL_MODE_ASCII);
     }
 
     public void disconnectFromPLATO() {
@@ -119,7 +155,7 @@ public class PLATONetworkService extends Service {
         }
     }
 
-    public class PLATONetworkBinder extends Binder {
+    class PLATONetworkBinder extends Binder {
         PLATONetworkService getService() {
             return PLATONetworkService.this;
         }
