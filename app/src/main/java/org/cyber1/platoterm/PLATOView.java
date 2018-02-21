@@ -28,9 +28,10 @@ public class PLATOView extends View {
     private boolean boldWritingMode;
     private int[] currentFont;
     private boolean verticalWritingMode;
-    private PlatoRAM ram;
+    private PLATORam ram;
     private boolean modeXOR;
     private PLATOFont mFonts;
+    private byte[] walkstack;
 
 
     public PLATOView(Context context) {
@@ -72,11 +73,11 @@ public class PLATOView extends View {
         this.verticalWritingMode = verticalWritingMode;
     }
 
-    public PlatoRAM getRam() {
+    public PLATORam getRam() {
         return ram;
     }
 
-    public void setRam(PlatoRAM ram) {
+    public void setRam(PLATORam ram) {
         this.ram = ram;
     }
 
@@ -128,6 +129,7 @@ public class PLATOView extends View {
 
         mRenderRect = new RectF();
         setFonts(new PLATOFont());
+        walkstack = new byte[262146]; // 512 * 512 + 2
     }
 
     @Override
@@ -286,7 +288,7 @@ public class PLATOView extends View {
                 setPoint(x, y, currentColor, isModeXOR());
             }
         }
-        
+
         // todo: implement textmap.
     }
 
@@ -392,4 +394,81 @@ public class PLATOView extends View {
         }
 
     }
+
+    public void doPaint(int x, int y, int pat) {
+        doPaintWalker(x, y, pat, 0);
+        doPaintWalker(x, y, pat, 1);
+    }
+
+    public void doPaintWalker(int x, int y, int pat, int pass) {
+/*
+        int sp;
+        int maxsp=0;
+        int pixels=0;
+        int w=0,i=0,d=0;
+        int currentChar;
+
+        if (pat>0)
+        {
+            if (pat<256)
+            {
+                pat+=32;
+                if (pat<128)
+                {
+                    d=getFonts().getPlato_m0()[pat];
+                }
+                else
+                {
+                    d=getFonts().getPlato_m1()[pat];
+                }
+            }
+            else
+            {
+                d=pat;
+            }
+
+            if (d==0xff)
+            {
+                // Trying to do char fill with a non-character.
+                return;
+            }
+
+            // i is the set, d is the offset within the set
+            i = d >> 7;
+            d &= 0x7f;
+
+            // Form the offset to the character pattern
+            if (i==0)
+            {
+                currentChar=getFonts().getPlato_m0()[8*d];
+            }
+            else if (i==1)
+            {
+                currentChar=getFonts().getPlato_m1()[8*d];
+            }
+            else if (i==2)
+            {
+                currentChar=getFonts().getPlato_m2()[8*d];
+            }
+            else if (i==3)
+            {
+                currentChar=getFonts().getPlato_m3()[8*d];
+            }
+        }
+        sp = -1;
+        walkstack[++sp] = 0;
+        while (sp>=0)
+        {
+            if (sp > maxsp)
+            {
+                maxsp=sp;
+            }
+
+        }
+*/
+
+    }
+
 }
+
+

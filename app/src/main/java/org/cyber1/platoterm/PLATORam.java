@@ -9,12 +9,12 @@ package org.cyber1.platoterm;
  * Created by thomc on 2/18/2018.
  */
 
-public class PlatoRAM {
+public class PLATORam {
 
     public static final int MODE = 0x22F6;
     private int[] ram;
 
-    public PlatoRAM() {
+    public PLATORam() {
         ram = new int[0xD000];
     }
 
