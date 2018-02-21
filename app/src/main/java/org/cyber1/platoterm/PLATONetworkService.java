@@ -31,13 +31,12 @@ public class PLATONetworkService extends Service {
     private CircularArray<Byte> fromFIFO;   // Data FROM PLATO
     private CircularArray<Byte> toFIFO;     // Data TO PLATO
     private boolean mRunning = false;
+    private PLATOProtocol mProtocol;
     private Runnable serviceThread = new Runnable() {
 
         @Override
         public void run() {
-            while (!isRunning()) {
-                start();
-            }
+            start();
         }
     };
 
@@ -72,9 +71,17 @@ public class PLATONetworkService extends Service {
         return toFIFO;
     }
 
+    public void setToFIFO(CircularArray<Byte> toFIFO) {
+        this.toFIFO = toFIFO;
+    }
+
     @Contract(pure = true)
     private CircularArray<Byte> getFromFIFO() {
         return fromFIFO;
+    }
+
+    public void setFromFIFO(CircularArray<Byte> fromFIFO) {
+        this.fromFIFO = fromFIFO;
     }
 
     public boolean isRunning() {
@@ -88,8 +95,9 @@ public class PLATONetworkService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        fromFIFO = new CircularArray<>(BUFFER_SIZE);
-        toFIFO = new CircularArray<>(BUFFER_SIZE);
+        setFromFIFO(new CircularArray<Byte>(BUFFER_SIZE));
+        setToFIFO(new CircularArray<Byte>(BUFFER_SIZE));
+        mProtocol = new PLATOProtocol(getFromFIFO(), getToFIFO());
         new Thread(serviceThread).start();
         Notification notification = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -135,10 +143,13 @@ public class PLATONetworkService extends Service {
                         getOs().write(getToFIFO().popLast());
                     }
                 }
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+            mProtocol.processInput();
+            mProtocol.processOutput();
+
         }
     }
 

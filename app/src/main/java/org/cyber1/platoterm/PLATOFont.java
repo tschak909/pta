@@ -5,10 +5,11 @@
 package org.cyber1.platoterm;
 
 /**
+ * The Built in PLATO fonts, mode 0 and 1.
  * Created by thomc on 2/17/2018.
  */
 
-public class PLATOFont {
+class PLATOFont {
 
     /**
      * Character set 0, lowercase and most used characters.
@@ -167,24 +168,24 @@ public class PLATOFont {
     private int[] plato_m2;
     private int[] plato_m3;
 
-    public PLATOFont() {
+    PLATOFont() {
         this.plato_m2 = new int[64 * 8];
         this.plato_m3 = new int[64 * 8];
     }
 
-    public int[] getPlato_m0() {
+    int[] getPlato_m0() {
         return plato_m0;
     }
 
-    public int[] getPlato_m1() {
+    int[] getPlato_m1() {
         return plato_m1;
     }
 
-    public int[] getPlato_m2() {
+    int[] getPlato_m2() {
         return plato_m2;
     }
 
-    public int[] getPlato_m3() {
+    int[] getPlato_m3() {
         return plato_m3;
     }
 

@@ -15,7 +15,6 @@ import android.os.IBinder;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
-import android.view.MotionEvent;
 import android.view.View;
 
 /**
@@ -23,17 +22,11 @@ import android.view.View;
  * status bar and navigation/system bar) with user interaction.
  */
 public class PLATOTerm extends AppCompatActivity {
+    /**
+     * Set to trigger view test pattern instead of normal operation.
+     */
+    private static final boolean VIEW_TEST = false;
 
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
-    private static final boolean AUTO_HIDE = true;
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
     /**
      * Some older devices needs a small delay between UI widget updates
      * and a change of the status and navigation bar.
@@ -70,7 +63,6 @@ public class PLATOTerm extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         }
     };
-    private View mControlsView;
     private boolean mVisible;
     private final Runnable mHideRunnable = new Runnable() {
         @Override
@@ -78,20 +70,7 @@ public class PLATOTerm extends AppCompatActivity {
             hide();
         }
     };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
+
     private PLATORam ram;
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -120,10 +99,6 @@ public class PLATOTerm extends AppCompatActivity {
         mService.disconnectFromPLATO();
     }
 
-    public PLATORam getRam() {
-        return ram;
-    }
-
     public void setRam(PLATORam ram) {
         this.ram = ram;
     }
@@ -142,7 +117,7 @@ public class PLATOTerm extends AppCompatActivity {
         mContentView.setDisplayMetrics(metrics);
 
         // Make view aware of terminal RAM
-        ram = new PLATORam();
+        setRam(new PLATORam());
         mContentView.setRam(ram);
 
         // Set up the user interaction to manually show or hide the system UI.
@@ -159,10 +134,17 @@ public class PLATOTerm extends AppCompatActivity {
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
 
+        //
+        // Throw up test pattern, if needed
+        //
+        if (VIEW_TEST) {
+            mContentView.testPattern();
+        }
+
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.
-        delayedHide(100);
+        delayedHide(UI_ANIMATION_DELAY);
     }
 
     private void toggle() {

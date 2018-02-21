@@ -9,29 +9,25 @@ package org.cyber1.platoterm;
  * Created by thomc on 2/18/2018.
  */
 
-public class PLATORam {
+class PLATORam {
 
-    public static final int MODE = 0x22F6;
+    private static final int MODE = 0x22F6;
     private int[] ram;
 
-    public PLATORam() {
+    PLATORam() {
         ram = new int[0xD000];
     }
 
-    public int getMode() {
+    int getMode() {
         return getRam()[MODE];
     }
 
-    public int getWeMode() {
+    int getWeMode() {
         return getMode() & 3;
     }
 
-    public int[] getRam() {
+    private int[] getRam() {
         return ram;
-    }
-
-    public void setRam(int[] ram) {
-        this.ram = ram;
     }
 
 }

@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 
 /**
@@ -19,6 +20,20 @@ public class PLATOView extends View {
     private static final int WIDTH=512;
     private static final int HEIGHT=512;
     private static final Bitmap.Config BITMAP_CONFIG = Bitmap.Config.ARGB_8888;
+    private static final boolean TEST_BOLD_ON = true;
+    private static final boolean TEST_VERTICAL_ON = true;
+    private static final boolean TEST_XOR_ON = true;
+    private static final int COLOR_WHITE = 0xFFFFFFFF;
+    private static final int COLOR_BLACK = 0x00000000;
+    private static final int TOP_RIGHT_X = 511;
+    private static final int TOP_RIGHT_Y = 511;
+    private static final int BOTTOM_LEFT_X = 0;
+    private static final int BOTTOM_LEFT_Y = 0;
+    private static final int MIDDLE_X = 256;
+    private static final int MIDDLE_Y = 256;
+    private static final int CHARSET_0 = 0;
+    private static final int CHAR_A = 1;
+    private static final boolean AUTOBS_TEST = true;
 
     private Bitmap mBitmap;
     private DisplayMetrics mDisplayMetrics;
@@ -31,7 +46,6 @@ public class PLATOView extends View {
     private PLATORam ram;
     private boolean modeXOR;
     private PLATOFont mFonts;
-    private byte[] walkstack;
 
 
     public PLATOView(Context context) {
@@ -124,29 +138,31 @@ public class PLATOView extends View {
     private void init(AttributeSet attrs, int defStyle) {
 
         if (mBitmap == null) {
-            mBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888);
+            mBitmap = Bitmap.createBitmap(WIDTH, HEIGHT, BITMAP_CONFIG);
         }
+
+        if (attrs != null) {
+            Log.d("PLATOTerm", "PLATOView init called with attrs " + attrs.toString());
+        }
+
+        Log.d("PLATOTerm", "PLATOView init called with defstyle " + defStyle);
 
         mRenderRect = new RectF();
         setFonts(new PLATOFont());
-        walkstack = new byte[262146]; // 512 * 512 + 2
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // TODO: consider storing these as member variables to reduce
-        // allocations per draw cycle.
-        int paddingLeft = getPaddingLeft();
-        int paddingTop = getPaddingTop();
-        int paddingRight = getPaddingRight();
-        int paddingBottom = getPaddingBottom();
+        // int paddingLeft = getPaddingLeft();
+        // int paddingTop = getPaddingTop();
+        // int paddingRight = getPaddingRight();
+        // int paddingBottom = getPaddingBottom();
 
-        int contentWidth = getWidth() - paddingLeft - paddingRight;
-        int contentHeight = getHeight() - paddingTop - paddingBottom;
+        // int contentWidth = getWidth() - paddingLeft - paddingRight;
+        // int contentHeight = getHeight() - paddingTop - paddingBottom;
 
-        // TODO: scale to aspect ratio instead of naive stretch.
         mRenderRect.top = 0;
         mRenderRect.left = 0;
         mRenderRect.bottom = getDisplayMetrics().heightPixels;
@@ -189,7 +205,7 @@ public class PLATOView extends View {
      * @param y2 Ending Y coordinate of line (0-511)
      */
     public void plotLine(int x1, int y1, int x2, int y2) {
-        int dx, dy = 0;
+        int dx, dy;
         int sx, sy = 0;
 
         dx = x2 - x1;
@@ -303,16 +319,20 @@ public class PLATOView extends View {
      */
     public void drawChar(int x, int y, int charset, int charnum, boolean autobs) {
 
+        if (autobs) {
+            Log.d("PLATOTerm", "autobs set, but not implemented.");
+        }
+
         // Save colors here so we can swap if needed for inverse video.
         int fgcolor = getDrawingColorFG();
         int bgcolor = getDrawingColorBG();
 
         // Drawing indexes
-        int i = 0, j = 0, saveY = 0, dx = 0, dy = 0, sdy = 0;
+        int i, j, saveY, dx, dy, sdy;
 
         // Current Char being drawn.
-        int currentChar = 0;
-        int charindex = 0;
+        int currentChar;
+        int charindex;
 
         // Current X and Y position (initially at origin.)
         int cx = x, cy = y;
@@ -387,7 +407,6 @@ public class PLATOView extends View {
                 }
                 currentChar >>= 1;
                 cy += dy;
-                y = cy;
             }
             charindex++;
             cx += dx;
@@ -395,12 +414,16 @@ public class PLATOView extends View {
 
     }
 
+/*
     public void doPaint(int x, int y, int pat) {
-        doPaintWalker(x, y, pat, 0);
-        doPaintWalker(x, y, pat, 1);
+        // doPaintWalker(x, y, pat, 0);
+        //doPaintWalker(x, y, pat, 1);
     }
+*/
 
+/*
     public void doPaintWalker(int x, int y, int pat, int pass) {
+*/
 /*
         int sp;
         int maxsp=0;
@@ -465,8 +488,25 @@ public class PLATOView extends View {
             }
 
         }
+*//*
+
+
+    }
 */
 
+    /**
+     * A view test case.
+     */
+    public void testPattern() {
+        erase();
+        erase(BOTTOM_LEFT_X, BOTTOM_LEFT_Y, TOP_RIGHT_X, TOP_RIGHT_Y);
+        setBoldWritingMode(TEST_BOLD_ON);
+        setVerticalWritingMode(TEST_VERTICAL_ON);
+        setModeXOR(TEST_XOR_ON);
+        setDrawingColorFG(COLOR_WHITE);
+        setDrawingColorBG(COLOR_BLACK);
+        plotLine(TOP_RIGHT_X, TOP_RIGHT_Y, BOTTOM_LEFT_X, BOTTOM_LEFT_Y);
+        drawChar(MIDDLE_X, MIDDLE_Y, CHARSET_0, CHAR_A, AUTOBS_TEST);
     }
 
 }
