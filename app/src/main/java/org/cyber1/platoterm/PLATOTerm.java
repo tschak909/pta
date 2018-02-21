@@ -5,8 +5,13 @@
 package org.cyber1.platoterm;
 
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -18,18 +23,17 @@ import android.view.View;
  * status bar and navigation/system bar) with user interaction.
  */
 public class PLATOTerm extends AppCompatActivity {
+
     /**
      * Whether or not the system UI should be auto-hidden after
      * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
      */
     private static final boolean AUTO_HIDE = true;
-
     /**
      * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
      * user interaction before hiding the system UI.
      */
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
-
     /**
      * Some older devices needs a small delay between UI widget updates
      * and a change of the status and navigation bar.
@@ -46,6 +50,8 @@ public class PLATOTerm extends AppCompatActivity {
             }
         }
     };
+    PLATONetworkService mService;
+    boolean mBound = false;
     private PLATOView mContentView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -87,6 +93,32 @@ public class PLATOTerm extends AppCompatActivity {
         }
     };
     private PLATORam ram;
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PLATONetworkService.PLATONetworkBinder binder = (PLATONetworkService.PLATONetworkBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mBound = false;
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = new Intent(this, PLATONetworkService.class);
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mService.disconnectFromPLATO();
+    }
 
     public PLATORam getRam() {
         return ram;
@@ -112,7 +144,6 @@ public class PLATOTerm extends AppCompatActivity {
         // Make view aware of terminal RAM
         ram = new PLATORam();
         mContentView.setRam(ram);
-
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
