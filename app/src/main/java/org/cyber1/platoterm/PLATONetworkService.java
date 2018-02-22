@@ -13,8 +13,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.util.CircularArray;
 import android.util.Log;
 
-import org.jetbrains.annotations.Contract;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,7 +29,7 @@ public class PLATONetworkService extends Service {
     private CircularArray<Byte> fromFIFO;   // Data FROM PLATO
     private CircularArray<Byte> toFIFO;     // Data TO PLATO
     private boolean mRunning = false;
-    private PLATOProtocol mProtocol;
+
     private Runnable serviceThread = new Runnable() {
 
         @Override
@@ -75,8 +73,7 @@ public class PLATONetworkService extends Service {
         this.toFIFO = toFIFO;
     }
 
-    @Contract(pure = true)
-    private CircularArray<Byte> getFromFIFO() {
+    public CircularArray<Byte> getFromFIFO() {
         return fromFIFO;
     }
 
@@ -97,11 +94,10 @@ public class PLATONetworkService extends Service {
         super.onCreate();
         setFromFIFO(new CircularArray<Byte>(BUFFER_SIZE));
         setToFIFO(new CircularArray<Byte>(BUFFER_SIZE));
-        mProtocol = new PLATOProtocol(getFromFIFO(), getToFIFO());
         new Thread(serviceThread).start();
         Notification notification = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("PLATOTerm")
+                .setContentTitle("PLATOActivity")
                 .setContentText("Connected to CYBER1")
                 .build();
         startForeground(8005, notification);
@@ -118,7 +114,7 @@ public class PLATONetworkService extends Service {
             setIs(getSocket().getInputStream());
             setOs(getSocket().getOutputStream());
         } catch (IOException e) {
-            Log.e("PLATOTerm", "TCP Error: ", e);
+            Log.e("PLATOActivity", "TCP Error: ", e);
         }
 
         doIO();
@@ -134,7 +130,7 @@ public class PLATONetworkService extends Service {
             try {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
-                    getFromFIFO().addLast((byte) is.read());
+                    getFromFIFO().addFirst((byte) is.read());
                 }
 
                 // Drain the output FIFO
@@ -147,14 +143,12 @@ public class PLATONetworkService extends Service {
                 e.printStackTrace();
             }
 
-            mProtocol.processInput();
-            mProtocol.processOutput();
-
         }
     }
 
     public void start() {
         connectToPLATO(DEFAULT_HOST, PROTOCOL_MODE_ASCII);
+
     }
 
     public void disconnectFromPLATO() {

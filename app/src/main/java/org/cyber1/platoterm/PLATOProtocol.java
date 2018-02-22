@@ -4,51 +4,100 @@
 
 package org.cyber1.platoterm;
 
-
-import android.support.v4.util.CircularArray;
+import android.annotation.SuppressLint;
 import android.util.Log;
+import android.widget.Toast;
+
+import org.jetbrains.annotations.Contract;
 
 /**
+ * PLATOProtocol - ASCII Protocol Decoding (for now)
  * Created by thomc on 2/21/2018.
- * Process protocol input and output streams.
  */
 
 class PLATOProtocol {
-    private CircularArray<Byte> fromFIFO;
-    private CircularArray<Byte> toFIFO;
+
+    private static final byte ASCII_ESCAPE = 0x1B;
+    private static final byte ASCII_STX = 0x02;
+    private static final byte ASCII_ETX = 0x03;
+
+    private boolean isDumbTerminal;
+
+    private PLATOActivity platoActivity;
+    private boolean escape;
+
+    PLATOProtocol(PLATOActivity platoActivity) {
+        this.platoActivity = platoActivity;
+    }
+
+    private boolean isEscape() {
+        return escape;
+    }
+
+    private void setEscape(boolean escape) {
+        this.escape = escape;
+    }
+
+    @Contract(pure = true)
+    private PLATOActivity getPlatoActivity() {
+        return platoActivity;
+    }
 
     /**
-     * Construct PLATOProtocol instance
-     *
-     * @param fromFIFO the from FIFO from the PLATONetworkService
-     * @param toFIFO   the to FIFO from the PLATONetworkService
+     * Given a byte, decode and send off to the appropriate logic.
+     * @param b Byte to decode
      */
-    PLATOProtocol(CircularArray<Byte> fromFIFO, CircularArray<Byte> toFIFO) {
-        this.fromFIFO = fromFIFO;
-        this.toFIFO = toFIFO;
-    }
-
-    void processInput() {
-        if (!fromFIFO.isEmpty()) {
-            for (int i = 0; i < fromFIFO.size(); i++) {
-                processNextInputByte(fromFIFO.popLast());
-            }
+    void decodeByte(byte b) {
+        if (b == ASCII_ESCAPE)
+            setEscape(true);
+        if (isEscape()) {
+            decodeEscape(b);
+        } else if (isDumbTerminal()) {
+            decodeDumbTerminal(b);
         }
     }
 
-    void processOutput() {
-        if (!toFIFO.isEmpty()) {
-            for (int i = 0; i < toFIFO.size(); i++) {
-                processNextOutputByte(fromFIFO.popLast());
-            }
+    /**
+     * Decode byte in dumb terminal mode.
+     *
+     * @param b Byte to decode
+     */
+    private void decodeDumbTerminal(byte b) {
+        if ((b >= 32) && (b < 127)) {
+            // Normal ASCII character in dumb terminal mode.
+            Log.i("PLATOActivity", "Printing ASCII byte: " + Byte.toString(b));
         }
     }
 
-    private void processNextOutputByte(Byte aByte) {
-        Log.i("PLATOTerm", "Sent output byte: " + aByte);
+    /**
+     * An escape sequence! Let's decode it.
+     *
+     * @param b Byte to decode
+     */
+    @SuppressLint("ShowToast")
+    private void decodeEscape(byte b) {
+        if (b == ASCII_STX) {
+            // Start PLATO mode
+            setDumbTerminal(false);
+            setEscape(false);
+            Log.i("PLATOActivity", "STX Received");
+            Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Established", Toast.LENGTH_LONG).show();
+        } else if (b == ASCII_ETX) {
+            // End PLATO mode
+            setDumbTerminal(true);
+            setEscape(false);
+            Log.i("PLATOActivity", "ETX Received");
+            Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Ended", Toast.LENGTH_LONG).show();
+
+        }
     }
 
-    private void processNextInputByte(Byte aByte) {
-        Log.i("PLATOTerm", "Received input byte: " + aByte);
+    @Contract(pure = true)
+    private boolean isDumbTerminal() {
+        return isDumbTerminal;
+    }
+
+    private void setDumbTerminal(boolean dumbTerminal) {
+        isDumbTerminal = dumbTerminal;
     }
 }

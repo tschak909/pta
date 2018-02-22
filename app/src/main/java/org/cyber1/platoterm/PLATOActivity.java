@@ -21,17 +21,30 @@ import android.view.View;
  * An example full-screen activity that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
  */
-public class PLATOTerm extends AppCompatActivity {
+public class PLATOActivity extends AppCompatActivity {
     /**
      * Set to trigger view test pattern instead of normal operation.
      */
     private static final boolean VIEW_TEST = false;
-
     /**
      * Some older devices needs a small delay between UI widget updates
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
+
+//    private final Handler keytestHandler = new Handler();
+
+//    private final Runnable keytestRunnable = new Runnable() {
+//        @Override
+//        public void run() {
+//            Log.i("PLATOActivity","Smashing NEXT key.");
+//            mService.getToFIFO().addLast((byte)0x0d);
+//        }
+//    };
+    /**
+     * This is a handler for pulling the latest data from the network service
+     */
+    private final Handler networkHandler = new Handler();
     private final Handler mHideHandler = new Handler();
     private final Runnable mShowPart2Runnable = new Runnable() {
         @Override
@@ -45,6 +58,21 @@ public class PLATOTerm extends AppCompatActivity {
     };
     PLATONetworkService mService;
     boolean mBound = false;
+    PLATOProtocol protocol;
+    /**
+     * The runner for handling network data.
+     */
+    private final Runnable networkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
+                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
+                    processData(mService.getFromFIFO().popFirst());
+                }
+            }
+            networkHandler.post(networkRunnable);
+        }
+    };
     private PLATOView mContentView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -71,6 +99,10 @@ public class PLATOTerm extends AppCompatActivity {
         }
     };
 
+//    public PLATORam getRam() {
+//        return ram;
+//    }
+
     private PLATORam ram;
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -85,6 +117,14 @@ public class PLATOTerm extends AppCompatActivity {
             mBound = false;
         }
     };
+
+    private void processData(Byte aByte) {
+        if (protocol == null) {
+            protocol = new PLATOProtocol(this);
+        } else {
+            protocol.decodeByte(aByte);
+        }
+    }
 
     @Override
     protected void onStart() {
@@ -141,6 +181,9 @@ public class PLATOTerm extends AppCompatActivity {
             mContentView.testPattern();
         }
 
+        networkHandler.post(networkRunnable);
+        // keytestHandler.postDelayed(keytestRunnable,6000);
+
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.
@@ -188,5 +231,6 @@ public class PLATOTerm extends AppCompatActivity {
         mHideHandler.removeCallbacks(mHideRunnable);
         mHideHandler.postDelayed(mHideRunnable, delayMillis);
     }
+
 
 }

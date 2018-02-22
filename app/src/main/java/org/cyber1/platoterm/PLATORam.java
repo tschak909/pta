@@ -22,6 +22,10 @@ class PLATORam {
         return getRam()[MODE];
     }
 
+    void setMode(int mode) {
+        getRam()[MODE] = mode;
+    }
+
     int getWeMode() {
         return getMode() & 3;
     }

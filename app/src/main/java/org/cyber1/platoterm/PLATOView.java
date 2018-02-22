@@ -142,10 +142,10 @@ public class PLATOView extends View {
         }
 
         if (attrs != null) {
-            Log.d("PLATOTerm", "PLATOView init called with attrs " + attrs.toString());
+            Log.d("PLATOActivity", "PLATOView init called with attrs " + attrs.toString());
         }
 
-        Log.d("PLATOTerm", "PLATOView init called with defstyle " + defStyle);
+        Log.d("PLATOActivity", "PLATOView init called with defstyle " + defStyle);
 
         mRenderRect = new RectF();
         setFonts(new PLATOFont());
@@ -320,7 +320,7 @@ public class PLATOView extends View {
     public void drawChar(int x, int y, int charset, int charnum, boolean autobs) {
 
         if (autobs) {
-            Log.d("PLATOTerm", "autobs set, but not implemented.");
+            Log.d("PLATOActivity", "autobs set, but not implemented.");
         }
 
         // Save colors here so we can swap if needed for inverse video.

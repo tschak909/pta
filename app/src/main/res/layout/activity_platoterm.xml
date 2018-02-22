@@ -7,7 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000"
-    tools:context="org.cyber1.platoterm.PLATOTerm">
+    tools:context="org.cyber1.platoterm.PLATOActivity">
 
     <org.cyber1.platoterm.PLATOView
         android:id="@+id/fullscreen_content"
