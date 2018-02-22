@@ -414,6 +414,17 @@ public class PLATOView extends View {
 
     }
 
+    /**
+     * Produce scrolling by block copying 0,0,511,495 into temporary space, blanking bitmap, and
+     * then copying temporary space back onto main bitmap.
+     */
+    public void scrollUp() {
+        int[] temp = new int[WIDTH * HEIGHT * 4];
+        mBitmap.getPixels(temp, 0, WIDTH, 0, 16, 511, 495);
+        mBitmap.eraseColor(0);
+        mBitmap.setPixels(temp, 0, WIDTH, 0, 0, 511, 495);
+    }
+
 /*
     public void doPaint(int x, int y, int pat) {
         // doPaintWalker(x, y, pat, 0);

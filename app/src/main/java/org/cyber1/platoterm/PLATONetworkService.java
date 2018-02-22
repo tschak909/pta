@@ -20,8 +20,8 @@ import java.net.Socket;
 
 public class PLATONetworkService extends Service {
     private static final int BUFFER_SIZE = 8192;
-    private static final String DEFAULT_HOST = "cyberserv.org";
-    private static final int PROTOCOL_MODE_ASCII = 8005;
+    private static final String DEFAULT_HOST = "192.168.1.14";
+    private static final int PROTOCOL_MODE_ASCII = 1234;
     private final IBinder mBinder = new PLATONetworkBinder();
     private InputStream is;
     private OutputStream os;
@@ -130,7 +130,7 @@ public class PLATONetworkService extends Service {
             try {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
-                    getFromFIFO().addFirst((byte) is.read());
+                    getFromFIFO().addLast((byte) is.read());
                 }
 
                 // Drain the output FIFO

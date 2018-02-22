@@ -32,16 +32,6 @@ public class PLATOActivity extends AppCompatActivity {
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
-
-//    private final Handler keytestHandler = new Handler();
-
-//    private final Runnable keytestRunnable = new Runnable() {
-//        @Override
-//        public void run() {
-//            Log.i("PLATOActivity","Smashing NEXT key.");
-//            mService.getToFIFO().addLast((byte)0x0d);
-//        }
-//    };
     /**
      * This is a handler for pulling the latest data from the network service
      */
@@ -60,6 +50,16 @@ public class PLATOActivity extends AppCompatActivity {
     PLATONetworkService mService;
     boolean mBound = false;
     PLATOProtocol protocol;
+
+//    private final Handler keytestHandler = new Handler();
+
+//    private final Runnable keytestRunnable = new Runnable() {
+//        @Override
+//        public void run() {
+//            Log.i("PLATOActivity","Smashing NEXT key.");
+//            mService.getToFIFO().addLast((byte)0x0d);
+//        }
+//    };
     /**
      * The runner for handling network data.
      */
@@ -74,6 +74,14 @@ public class PLATOActivity extends AppCompatActivity {
             networkHandler.post(networkRunnable);
         }
     };
+    /**
+     * Current X coordinate
+     */
+    private int currentX;
+    /**
+     * Current Y coordinate
+     */
+    private int currentY;
     private PLATOView mContentView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -99,11 +107,6 @@ public class PLATOActivity extends AppCompatActivity {
             hide();
         }
     };
-
-//    public PLATORam getRam() {
-//        return ram;
-//    }
-
     private PLATORam ram;
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -118,6 +121,26 @@ public class PLATOActivity extends AppCompatActivity {
             mBound = false;
         }
     };
+
+    public int getCurrentX() {
+        return currentX;
+    }
+
+    public void setCurrentX(int currentX) {
+        this.currentX = currentX;
+    }
+
+//    public PLATORam getRam() {
+//        return ram;
+//    }
+
+    public int getCurrentY() {
+        return currentY;
+    }
+
+    public void setCurrentY(int currentY) {
+        this.currentY = currentY;
+    }
 
     private void processData(Byte aByte) {
         if (protocol == null) {
@@ -164,6 +187,9 @@ public class PLATOActivity extends AppCompatActivity {
         // Make view aware of terminal RAM
         setRam(new PLATORam());
         mContentView.setRam(ram);
+
+        mContentView.setDrawingColorFG(0xFFFFFFFF);
+        mContentView.setDrawingColorBG(0x00000000);
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
@@ -237,5 +263,21 @@ public class PLATOActivity extends AppCompatActivity {
         mHideHandler.postDelayed(mHideRunnable, delayMillis);
     }
 
+    /**
+     * Scroll the terminal up one line.
+     */
+    public void scrollUp() {
+        mContentView.scrollUp();
+    }
 
+    /**
+     * Plot a character to the view
+     *
+     * @param charsetToUse Character set to use, 0, 1, 2, or 3
+     * @param charToPlot   character to plot in character set
+     */
+    public void drawChar(int charsetToUse, int charToPlot) {
+        mContentView.drawChar(getCurrentX(), getCurrentY(), charsetToUse, charToPlot, false);
+        setCurrentX(getCurrentX() + 8);
+    }
 }
