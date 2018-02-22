@@ -10,6 +10,8 @@ import android.widget.Toast;
 
 import org.jetbrains.annotations.Contract;
 
+import java.nio.charset.Charset;
+
 /**
  * PLATOProtocol - ASCII Protocol Decoding (for now)
  * Created by thomc on 2/21/2018.
@@ -76,11 +78,11 @@ class PLATOProtocol {
         }
 
         if (!isDecoded() && getProtocolError().isEmpty()) {
-            setProtocolError("Undecoded top level character: " + b);
+            setProtocolError("Undecoded top level character");
         }
 
         if (!getProtocolError().isEmpty()) {
-            Log.i(this.getClass().getName(), "Protocol Error: " + getProtocolError());
+            Log.i(this.getClass().getName(), "Protocol Error: " + getProtocolError() + ": " + displayByte(b));
         }
 
     }
@@ -130,7 +132,7 @@ class PLATOProtocol {
 
         }
         if (!isDecoded()) {
-            setProtocolError("Undecoded ESCape: " + b);
+            setProtocolError("Undecoded ESCape");
         }
     }
 
@@ -142,4 +144,18 @@ class PLATOProtocol {
     private void setDumbTerminal(boolean dumbTerminal) {
         this.dumbTerminal = dumbTerminal;
     }
+
+    private String displayByte(byte b) {
+        byte[] bytes = new byte[1];
+        bytes[0] = b;
+        String s = new String(bytes, Charset.defaultCharset());
+
+        if (b >= 32 && b < 127) {
+            return s;
+        } else {
+            return String.valueOf(b);
+        }
+    }
+
 }
+
