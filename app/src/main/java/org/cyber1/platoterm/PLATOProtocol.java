@@ -65,7 +65,8 @@ class PLATOProtocol {
     private void decodeDumbTerminal(byte b) {
         if ((b >= 32) && (b < 127)) {
             // Normal ASCII character in dumb terminal mode.
-            Log.i("PLATOActivity", "Printing ASCII byte: " + Byte.toString(b));
+            Log.i("PLATOActivity", "Dumb terminal Printing ASCII byte: " + Byte.toString(b));
+            // TODO: Implement dumb terminal ascii output.
         }
     }
 

@@ -15,6 +15,7 @@ import android.os.IBinder;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 
 /**
@@ -129,6 +130,7 @@ public class PLATOActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        Log.i("PLATOActivity", "ONSTART!!!");
         Intent intent = new Intent(this, PLATONetworkService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
@@ -136,7 +138,10 @@ public class PLATOActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        Log.i("PLATOActivity", "ONSTOP!!!");
         mService.disconnectFromPLATO();
+        unbindService(mConnection);
+        mBound = false;
     }
 
     public void setRam(PLATORam ram) {

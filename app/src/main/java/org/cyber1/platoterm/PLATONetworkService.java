@@ -160,10 +160,22 @@ public class PLATONetworkService extends Service {
         }
     }
 
+    /**
+     * Try to make this service stick around
+     *
+     * @param intent  The intent that started it
+     * @param flags   Special flags passed in when starting service
+     * @param startId The given ID for the service
+     * @return START_STICKY to make it stick.
+     */
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
+    }
+
     class PLATONetworkBinder extends Binder {
         PLATONetworkService getService() {
             return PLATONetworkService.this;
         }
     }
-
 }
