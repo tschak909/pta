@@ -20,14 +20,30 @@ class PLATOProtocol {
     private static final byte ASCII_ESCAPE = 0x1B;
     private static final byte ASCII_STX = 0x02;
     private static final byte ASCII_ETX = 0x03;
-
-    private boolean isDumbTerminal;
-
+    private String protocolError;
+    private boolean dumbTerminal;
+    private boolean decoded;
     private PLATOActivity platoActivity;
     private boolean escape;
 
     PLATOProtocol(PLATOActivity platoActivity) {
         this.platoActivity = platoActivity;
+    }
+
+    private String getProtocolError() {
+        return protocolError;
+    }
+
+    private void setProtocolError(String protocolError) {
+        this.protocolError = protocolError;
+    }
+
+    private boolean isDecoded() {
+        return decoded;
+    }
+
+    private void setDecoded(boolean decoded) {
+        this.decoded = decoded;
     }
 
     private boolean isEscape() {
@@ -48,13 +64,25 @@ class PLATOProtocol {
      * @param b Byte to decode
      */
     void decodeByte(byte b) {
+        setDecoded(false);
+
         if (b == ASCII_ESCAPE)
+            Log.i(this.getClass().getName(), "New Escape Sequence");
             setEscape(true);
         if (isEscape()) {
             decodeEscape(b);
         } else if (isDumbTerminal()) {
             decodeDumbTerminal(b);
         }
+
+        if (!isDecoded() && getProtocolError().isEmpty()) {
+            setProtocolError("Undecoded top level character: " + b);
+        }
+
+        if (!getProtocolError().isEmpty()) {
+            Log.i(this.getClass().getName(), "Protocol Error: " + getProtocolError());
+        }
+
     }
 
     /**
@@ -65,7 +93,7 @@ class PLATOProtocol {
     private void decodeDumbTerminal(byte b) {
         if ((b >= 32) && (b < 127)) {
             // Normal ASCII character in dumb terminal mode.
-            Log.i("PLATOActivity", "Dumb terminal Printing ASCII byte: " + Byte.toString(b));
+            Log.i(this.getClass().getName(), "Dumb terminal Printing ASCII byte: " + Byte.toString(b));
             // TODO: Implement dumb terminal ascii output.
         }
     }
@@ -78,27 +106,40 @@ class PLATOProtocol {
     @SuppressLint("ShowToast")
     private void decodeEscape(byte b) {
         if (b == ASCII_STX) {
-            // Start PLATO mode
+            if (!isDumbTerminal()) {
+                // Should we act on this, or fall through?
+                Log.i(this.getClass().getName(), "Received STX while in PLATO mode.");
+            }
+            // Start PLATO mode, if in dumb terminal mode
             setDumbTerminal(false);
             setEscape(false);
-            Log.i("PLATOActivity", "STX Received");
+            setDecoded(true);
+            Log.i(this.getClass().getName(), "STX Received");
             Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Established", Toast.LENGTH_LONG).show();
         } else if (b == ASCII_ETX) {
             // End PLATO mode
+            if (isDumbTerminal()) {
+                // Should we act on this? or fall through?
+                Log.i(this.getClass().getName(), "Received ETX while in dumb terminal mode.");
+            }
             setDumbTerminal(true);
             setEscape(false);
-            Log.i("PLATOActivity", "ETX Received");
+            setDecoded(true);
+            Log.i(this.getClass().getName(), "ETX Received");
             Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Ended", Toast.LENGTH_LONG).show();
 
+        }
+        if (!isDecoded()) {
+            setProtocolError("Undecoded ESCape: " + b);
         }
     }
 
     @Contract(pure = true)
     private boolean isDumbTerminal() {
-        return isDumbTerminal;
+        return dumbTerminal;
     }
 
     private void setDumbTerminal(boolean dumbTerminal) {
-        isDumbTerminal = dumbTerminal;
+        this.dumbTerminal = dumbTerminal;
     }
 }
