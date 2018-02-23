@@ -416,7 +416,7 @@ public class PLATOView extends View {
 
     /**
      * Produce scrolling by block copying 0,0,511,495 into temporary space, blanking bitmap, and
-     * then copying temporary space back onto main bitmap.
+     * then copying temporary space back onto main bitmap, shifted upward.
      */
     public void scrollUp() {
         int[] temp = new int[WIDTH * HEIGHT * 4];

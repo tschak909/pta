@@ -74,6 +74,7 @@ public class PLATOActivity extends AppCompatActivity {
             networkHandler.post(networkRunnable);
         }
     };
+
     /**
      * Current X coordinate
      */
@@ -82,6 +83,24 @@ public class PLATOActivity extends AppCompatActivity {
      * Current Y coordinate
      */
     private int currentY;
+
+    /**
+     * Render text vertically/horizontally
+     */
+    private boolean verticalWritingMode;
+
+    /**
+     * Render text in reverse/forward
+     */
+    private boolean reverseWritingMode;
+
+    /**
+     * Render text in bold/normal size
+     */
+    private boolean boldWritingMode;
+
+    private int margin;
+    private int currentCharacterSet;
     private PLATOView mContentView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -122,6 +141,14 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
 
+    public int getCurrentCharacterSet() {
+        return currentCharacterSet;
+    }
+
+    public void setCurrentCharacterSet(int currentCharacterSet) {
+        this.currentCharacterSet = currentCharacterSet;
+    }
+
     public int getCurrentX() {
         return currentX;
     }
@@ -130,9 +157,13 @@ public class PLATOActivity extends AppCompatActivity {
         this.currentX = currentX;
     }
 
-//    public PLATORam getRam() {
-//        return ram;
-//    }
+    public PLATORam getRam() {
+        return ram;
+    }
+
+    public void setRam(PLATORam ram) {
+        this.ram = ram;
+    }
 
     public int getCurrentY() {
         return currentY;
@@ -165,10 +196,6 @@ public class PLATOActivity extends AppCompatActivity {
         mService.disconnectFromPLATO();
         unbindService(mConnection);
         mBound = false;
-    }
-
-    public void setRam(PLATORam ram) {
-        this.ram = ram;
     }
 
     @Override
@@ -279,5 +306,48 @@ public class PLATOActivity extends AppCompatActivity {
     public void drawChar(int charsetToUse, int charToPlot) {
         mContentView.drawChar(getCurrentX(), getCurrentY(), charsetToUse, charToPlot, false);
         setCurrentX(getCurrentX() + 8);
+    }
+
+    /**
+     * Erase the entire PLATO view
+     */
+    public void eraseScreen() {
+        mContentView.erase();
+    }
+
+    public void setXORMode(boolean b) {
+        mContentView.setModeXOR(b);
+    }
+
+    public boolean isVerticalWritingMode() {
+        return verticalWritingMode;
+    }
+
+    public void setVerticalWritingMode(boolean verticalWritingMode) {
+        this.verticalWritingMode = verticalWritingMode;
+    }
+
+    public boolean isReverseWritingMode() {
+        return reverseWritingMode;
+    }
+
+    public void setReverseWritingMode(boolean reverseWritingMode) {
+        this.reverseWritingMode = reverseWritingMode;
+    }
+
+    public boolean isBoldWritingMode() {
+        return boldWritingMode;
+    }
+
+    public void setBoldWritingMode(boolean boldWritingMode) {
+        this.boldWritingMode = boldWritingMode;
+    }
+
+    public int getMargin() {
+        return margin;
+    }
+
+    public void setMargin(int margin) {
+        this.margin = margin;
     }
 }

@@ -4,13 +4,10 @@
 
 package org.cyber1.platoterm;
 
-import android.annotation.SuppressLint;
 import android.util.Log;
 import android.widget.Toast;
 
 import org.jetbrains.annotations.Contract;
-
-import java.nio.charset.Charset;
 
 /**
  * PLATOProtocol - ASCII Protocol Decoding (for now)
@@ -19,17 +16,73 @@ import java.nio.charset.Charset;
 
 class PLATOProtocol {
 
+    /**
+     * Constants for ASCII codes
+     */
     private static final byte ASCII_ESCAPE = 0x1B;
     private static final byte ASCII_STX = 0x02;
     private static final byte ASCII_ETX = 0x03;
     private static final byte ASCII_CR = 0x0D;
     private static final byte ASCII_LF = 0x0A;
+    private static final byte ASCII_FF = 0x0C;
+    private static final byte ASCII_SYN = 0x16;
+    private static final byte ASCII_DC1 = 0x11;
+    private static final byte ASCII_DC2 = 0x12;
+    private static final byte ASCII_DC3 = 0x13;
+    private static final byte ASCII_DC4 = 0x14;
+    private static final byte ASCII_2 = 0x32;
+    private static final byte ASCII_AT = 0x40;
+    private static final byte ASCII_A = 0x41;
+    private static final byte ASCII_B = 0x42;
+    private static final byte ASCII_C = 0x43;
+    private static final byte ASCII_D = 0x44;
+    private static final byte ASCII_E = 0x45;
+    private static final byte ASCII_F = 0x46;
+    private static final byte ASCII_G = 0x47;
+    private static final byte ASCII_H = 0x48;
+    private static final byte ASCII_I = 0x49;
+    private static final byte ASCII_J = 0x4A;
+    private static final byte ASCII_K = 0x4B;
+    private static final byte ASCII_L = 0x4C;
+    private static final byte ASCII_M = 0x4D;
+    private static final byte ASCII_N = 0x4E;
+    private static final byte ASCII_O = 0x4F;
+    private static final byte ASCII_P = 0x50;
+    private static final byte ASCII_Q = 0x51;
+    private static final byte ASCII_R = 0x52;
+    private static final byte ASCII_S = 0x53;
+    private static final byte ASCII_T = 0x54;
+    private static final byte ASCII_U = 0x55;
+    private static final byte ASCII_V = 0x56;
+    private static final byte ASCII_W = 0x57;
+    private static final byte ASCII_X = 0x58;
+    private static final byte ASCII_Y = 0x59;
+    private static final byte ASCII_Z = 0x5A;
+    private static final byte ASCII_a = 0x61;
+    private static final byte ASCII_b = 0x62;
+    private static final byte ASCII_c = 0x63;
+    private static final byte ASCII_g = 0x67;
+    private static final byte ASCII_BACKSPACE = 0x08;
+    private static final byte ASCII_TAB = 0x09;
+    private static final byte ASCII_VT = 0x0B;
+    private static final byte ASCII_EM = 0x19;
+    private static final byte ASCII_FS = 0x1C;
+    private static final byte ASCII_GS = 0x1D;
+    private static final byte ASCII_RS = 0x1E;
+    private static final byte ASCII_US = 0x1F;
+    private static final byte ASCII_SPACE = 0x20;
+    private static final int[] ascMode = {0, 3, 2, 1};
     private String protocolError;
     private boolean dumbTerminal;
     private boolean decoded;
     private PLATOActivity platoActivity;
     private boolean escape;
+    private ascState currentAscState;
+    private int ascBytes; // Byte counter for complex commands.
 
+//    public int getAscBytes() {
+//        return ascBytes;
+//    }
     /**
      * ASCII to ROM character translation tables. Table M0
      */
@@ -50,7 +103,6 @@ class PLATOProtocol {
             0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
             0x18, 0x19, 0x1a, 0xa9, 0xae, 0xaa, 0xa4, 0xff
     };
-
     private int[] asciiM1 = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -77,6 +129,20 @@ class PLATOProtocol {
     PLATOProtocol(PLATOActivity platoActivity) {
         this.platoActivity = platoActivity;
         this.dumbTerminal = true; // Initially bring up in Dumb terminal mode.
+        setCurrentAscState(ascState.NONE);
+        setAscBytes(0); // Temporary until we get the secondary ascii states done.
+    }
+
+    public ascState getCurrentAscState() {
+        return currentAscState;
+    }
+
+    private void setCurrentAscState(ascState currentAscState) {
+        this.currentAscState = currentAscState;
+    }
+
+    private void setAscBytes(int ascBytes) {
+        this.ascBytes = ascBytes;
     }
 
     private String getProtocolError() {
@@ -120,7 +186,10 @@ class PLATOProtocol {
             decodePLATOByte(b);
         }
         if (getProtocolError() != null && !getProtocolError().isEmpty()) {
-            Log.i(this.getClass().getName(), "Protocol Error: " + getProtocolError());
+            Log.d(this.getClass().getName(), "Protocol Error: " + getProtocolError());
+            setProtocolError("");
+        } else if (!isDecoded()) {
+            Log.d(this.getClass().getName(), "Undecoded byte: " + b);
         }
     }
 
@@ -130,6 +199,241 @@ class PLATOProtocol {
      * @param b Byte to be decoded.
      */
     private void decodePLATOByte(byte b) {
+        if (b == ASCII_ESCAPE)
+            setEscape(true);
+
+        if (isEscape()) {
+            setEscape(false);
+            switch (b) {
+                case ASCII_STX:
+                    setProtocolError("STX called when still in PLATO mode. Ignoring.");
+                    setDumbTerminal(false);
+                    setDecoded(true);
+                    break;
+                case ASCII_ETX:
+                    Toast.makeText(getPlatoActivity().getApplicationContext(), "Exiting PLATO Mode. Dumb Terminal Mode Enabled.", Toast.LENGTH_SHORT).show();
+                    setDumbTerminal(true);
+                    setDumbTerminal(true);
+                    break;
+                case ASCII_FF:
+                    Log.d(this.getClass().getName(), "Erasing screen.");
+                    getPlatoActivity().eraseScreen();
+                    setDecoded(true);
+                    break;
+                case ASCII_SYN:
+                    Log.d(this.getClass().getName(), "Setting XOR mode.");
+                    getPlatoActivity().getRam().setMode((getPlatoActivity().getRam().getMode() & ~3) + 2);
+                    getPlatoActivity().setXORMode(true);
+                    setDecoded(true);
+                    break;
+                case ASCII_DC1:
+                case ASCII_DC2:
+                case ASCII_DC3:
+                case ASCII_DC4:
+                    // inverse, write, erase, rewrite
+                    Log.d(this.getClass().getName(), "Setting explicit mode " + ascMode[b - ASCII_DC1]);
+                    getPlatoActivity().setXORMode(false);
+                    getPlatoActivity().getRam().setMode((getPlatoActivity().getRam().getMode() & ~3) + ascMode[b - ASCII_DC1]);
+                    setDecoded(true);
+                    break;
+                case ASCII_2:
+                    // Load Coordinate
+                    Log.d(this.getClass().getName(), "Start of load coordinate command.");
+                    setCurrentAscState(ascState.LOAD_COORDINATES);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_AT:
+                    // Superscript
+                    Log.d(this.getClass().getName(), "Enable superscript");
+                    // TODO: IMPLEMENT SUPERSCRIPT
+                    setDecoded(true);
+                    break;
+                case ASCII_A:
+                    // Subscript
+                    Log.d(this.getClass().getName(), "Enable subscript");
+                    // TODO: IMPLEMENT SUBSCRIPT
+                    setDecoded(true);
+                    break;
+                case ASCII_B:
+                case ASCII_C:
+                case ASCII_D:
+                case ASCII_E:
+                case ASCII_F:
+                case ASCII_G:
+                case ASCII_H:
+                case ASCII_I:
+                    // Select current character set memory
+                    int i = b - ASCII_B;
+                    Log.d(this.getClass().getName(), "Select character memory #" + i);
+                    getPlatoActivity().setCurrentCharacterSet(i);
+                    setDecoded(true);
+                    break;
+                case ASCII_J:
+                    Log.d(this.getClass().getName(), "Horizontal Writing Mode");
+                    getPlatoActivity().setVerticalWritingMode(false);
+                    setDecoded(true);
+                    break;
+                case ASCII_K:
+                    Log.d(this.getClass().getName(), "Vertical writing mode");
+                    getPlatoActivity().setVerticalWritingMode(true);
+                    setDecoded(true);
+                    break;
+                case ASCII_L:
+                    Log.d(this.getClass().getName(), "Forward writing mode");
+                    getPlatoActivity().setReverseWritingMode(false);
+                    setDecoded(true);
+                    break;
+                case ASCII_M:
+                    Log.d(this.getClass().getName(), "Reverse writing mode");
+                    getPlatoActivity().setReverseWritingMode(true);
+                    setDecoded(true);
+                    break;
+                case ASCII_N:
+                    Log.d(this.getClass().getName(), "Normal size writing mode");
+                    getPlatoActivity().setBoldWritingMode(false);
+                    setDecoded(true);
+                    break;
+                case ASCII_O:
+                    Log.d(this.getClass().getName(), "Bold size writing mode");
+                    getPlatoActivity().setBoldWritingMode(true);
+                    setDecoded(true);
+                    break;
+                case ASCII_P:
+                    // Implementing as is from pterm, we'll see if this works.
+                    getPlatoActivity().setXORMode(false);
+                    int mode = ((platoActivity.getRam().getMode() & 3) + (2 << 2));
+                    Log.d(this.getClass().getName(), "Load mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
+                case ASCII_Q:
+                    Log.d(this.getClass().getName(), "Start SSF");
+                    setCurrentAscState(ascState.SSF);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_R:
+                    Log.d(this.getClass().getName(), "Start ext");
+                    setCurrentAscState(ascState.EXT);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_S:
+                    platoActivity.setXORMode(false);
+                    mode = ((getPlatoActivity().getRam().getMode() & 3) + (2 << 2));
+                    Log.d(this.getClass().getName(), "Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
+                case ASCII_T:
+                    platoActivity.setXORMode(false);
+                    mode = ((getPlatoActivity().getRam().getMode() & 3) + (5 << 2));
+                    Log.d(this.getClass().getName(), "Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
+                case ASCII_U:
+                    platoActivity.setXORMode(false);
+                    mode = ((getPlatoActivity().getRam().getMode() & 3) + (6 << 2));
+                    Log.d(this.getClass().getName(), "Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
+                case ASCII_V:
+                    platoActivity.setXORMode(false);
+                    mode = ((getPlatoActivity().getRam().getMode() & 3) + (7 << 2));
+                    Log.d(this.getClass().getName(), "Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
+                case ASCII_W:
+                    // Load memory address
+                    Log.d(this.getClass().getName(), "Start LDA");
+                    setCurrentAscState(ascState.LDA);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_X:
+                    Log.d(this.getClass().getName(), "Start Load PLATO Metadata");
+                    setCurrentAscState(ascState.PMD);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_Y:
+                    Log.d(this.getClass().getName(), "Start LDE");
+                    setCurrentAscState(ascState.LDE);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_Z:
+                    Log.d(this.getClass().getName(), "Set X margin to " + getPlatoActivity().getCurrentX());
+                    getPlatoActivity().setMargin(getPlatoActivity().getCurrentX());
+                    setDecoded(true);
+                    break;
+                case ASCII_a:
+                    Log.d(this.getClass().getName(), "Start Foreground color");
+                    setCurrentAscState(ascState.FG);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_b:
+                    Log.d(this.getClass().getName(), "Start Background color");
+                    setCurrentAscState(ascState.BG);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_c:
+                    Log.d(this.getClass().getName(), "Start paint");
+                    setCurrentAscState(ascState.PAINT);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                case ASCII_g:
+                    Log.d(this.getClass().getName(), "Start greyscale foreground color");
+                    setCurrentAscState(ascState.GSFG);
+                    setAscBytes(0);
+                    setDecoded(true);
+                    break;
+                default:
+                    setProtocolError("Unknown ESCAPE sequence: " + b);
+                    setDecoded(false);
+                    break;
+            }
+        } else {
+            // auxiliary ASCII control characters not bolted to escape.
+            switch (b) {
+                case ASCII_BACKSPACE:
+                case ASCII_TAB:
+                case ASCII_LF:
+                case ASCII_VT:
+                case ASCII_FF:
+                case ASCII_CR:
+                case ASCII_EM:
+                case ASCII_FS:
+                case ASCII_GS:
+                case ASCII_RS:
+                case ASCII_US:
+            }
+        }
+        if (b >= ASCII_SPACE) {
+            switch (getCurrentAscState()) {
+                case LOAD_COORDINATES:
+                case PAINT:
+                case LDE:
+                case LDA:
+                case EXT:
+                case SSF:
+                case FG:
+                case BG:
+                case GSFG:
+                case PMD:
+                case NONE:
+                case PNI_RS:
+                    break;
+            }
+        }
+
     }
 
     /**
@@ -140,14 +444,14 @@ class PLATOProtocol {
     private void decodeDumbTerminal(byte b) {
         if (b == ASCII_ESCAPE) {
             setEscape(true);
-            Log.i(this.getClass().getName(), "Escape detected in Dumb Terminal mode");
+            Log.d(this.getClass().getName(), "Escape detected in Dumb Terminal mode");
             setDecoded(true);
         } else if (b == ASCII_STX) {
             if (!isEscape()) {
                 setProtocolError("STX detected without corresponding escape in dumb terminal mode.");
                 setDecoded(true);
             } else {
-                Log.i(this.getClass().getName(), "Proper STX sequence, setting PLATO mode.");
+                Log.d(this.getClass().getName(), "Proper STX sequence, setting PLATO mode.");
                 setDumbTerminal(false);
                 setEscape(false);
                 Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Established", Toast.LENGTH_SHORT).show();
@@ -184,16 +488,6 @@ class PLATOProtocol {
         }
     }
 
-    /**
-     * An escape sequence! Let's decode it.
-     *
-     * @param b Byte to decode
-     */
-    @SuppressLint("ShowToast")
-    private void decodeEscape(byte b) {
-
-    }
-
     @Contract(pure = true)
     private boolean isDumbTerminal() {
         return dumbTerminal;
@@ -203,17 +497,7 @@ class PLATOProtocol {
         this.dumbTerminal = dumbTerminal;
     }
 
-    private String displayByte(byte b) {
-        byte[] bytes = new byte[1];
-        bytes[0] = b;
-        String s = new String(bytes, Charset.defaultCharset());
-
-        if (b >= 32 && b < 127) {
-            return s;
-        } else {
-            return String.valueOf(b);
-        }
-    }
+    private enum ascState {SSF, EXT, LDA, PMD, LDE, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
 
 }
 
