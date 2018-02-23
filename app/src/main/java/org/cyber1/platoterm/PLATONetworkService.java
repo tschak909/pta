@@ -19,9 +19,9 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 public class PLATONetworkService extends Service {
-    private static final int BUFFER_SIZE = 8192;
-    private static final String DEFAULT_HOST = "192.168.1.14";
-    private static final int PROTOCOL_MODE_ASCII = 1234;
+    private static final int BUFFER_SIZE = 2048;
+    private static final String DEFAULT_HOST = "cyberserv.org";
+    private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
     private InputStream is;
     private OutputStream os;
@@ -94,6 +94,10 @@ public class PLATONetworkService extends Service {
         super.onCreate();
         setFromFIFO(new CircularArray<Byte>(BUFFER_SIZE));
         setToFIFO(new CircularArray<Byte>(BUFFER_SIZE));
+        // Somehow, the very first item in the fifo doesn't make it there
+        // So I put nulls in.
+        getFromFIFO().addLast((byte) 0x00);
+        getToFIFO().addLast((byte) 0x00);
         new Thread(serviceThread).start();
         Notification notification = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)

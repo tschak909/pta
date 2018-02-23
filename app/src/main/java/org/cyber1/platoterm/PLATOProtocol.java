@@ -119,7 +119,7 @@ class PLATOProtocol {
         } else {
             decodePLATOByte(b);
         }
-        if (!getProtocolError().isEmpty()) {
+        if (getProtocolError() != null && !getProtocolError().isEmpty()) {
             Log.i(this.getClass().getName(), "Protocol Error: " + getProtocolError());
         }
     }
@@ -179,7 +179,6 @@ class PLATOProtocol {
                 int charsetToUse = (b & 0x80) >> 7;
                 charToPlot &= 0x7F;
                 setDecoded(true);
-                Log.i(this.getClass().getName(), "!!! Printable : " + b + " : " + charsetToUse + " : " + charToPlot);
                 getPlatoActivity().drawChar(charsetToUse, charToPlot);
             }
         }
