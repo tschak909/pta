@@ -373,8 +373,8 @@ class PLATOProtocol {
                     break;
                 case ASCII_W:
                     // Load memory address
-                    Log.d(this.getClass().getName(), "Start LDA");
-                    setCurrentAscState(ascState.LDA);
+                    Log.d(this.getClass().getName(), "Start LOAD_ADDRESS");
+                    setCurrentAscState(ascState.LOAD_ADDRESS);
                     setAscBytes(0);
                     setDecoded(true);
                     break;
@@ -513,8 +513,16 @@ class PLATOProtocol {
                     }
                     setDecoded(true);
                     break;
-                case LDA:
+                case LOAD_ADDRESS:
+                    n = AssembleData(b);
+                    if (n != -1) {
+                        Log.d(this.getClass().getName(), "Load memory address " + n);
+                        getPlatoActivity().getRam().setMAR(n & 0x7FFF);
+                    }
+                    setDecoded(true);
+                    break;
                 case EXT:
+
                 case SSF:
                 case FG:
                 case BG:
@@ -527,6 +535,28 @@ class PLATOProtocol {
             }
         }
 
+    }
+
+    /**
+     * Assemble an 18-bit data word for the ASCII protocol
+     *
+     * @param b Current byte of input
+     * @return -1 if word not complete, yet, otherwise, the word.
+     */
+    private int AssembleData(byte b) {
+        if (getAscBytes() == 0) {
+            setAssembler(0);
+        }
+        assembler |= ((b & 0x3F) << (getAscBytes() * 6));
+        if (++ascBytes == 3) {
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            Log.d(this.getClass().getName(), "Assemble data: byte offset:" + getAscBytes() + " value:" + (b & 0x3F));
+            return getAssembler();
+        } else {
+            Log.d(this.getClass().getName(), "Assembling data: byte offset:" + getAscBytes() + " value:" + (b & 0x3F));
+        }
+        return -1;
     }
 
     private void processEchoRequest(int n) {
@@ -880,7 +910,7 @@ class PLATOProtocol {
         this.pendingEcho = pendingEcho;
     }
 
-    private enum ascState {SSF, EXT, LDA, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
+    private enum ascState {SSF, EXT, LOAD_ADDRESS, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
 
 }
 
