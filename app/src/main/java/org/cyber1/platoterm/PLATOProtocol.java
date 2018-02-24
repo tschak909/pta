@@ -76,6 +76,10 @@ class PLATOProtocol {
     private static final int ASCFEATURES = 0x09; // ASC_WINDOW | ASC_ZFGT
     private static final int ASCII_XOFF = ASCII_DC1;
     private static final int ASCII_XON = ASCII_DC3;
+    private static final int EXT_CWS_TERMSAVE = 2000;
+    private static final int EXT_CWS_TERMRESTORE = 2001;
+    private static final int EXT_CWS_SAVE = 0;
+    private static final int EXT_CWS_RESTORE = 1;
     private String protocolError;
     private boolean dumbTerminal;
     private boolean decoded;
@@ -147,6 +151,9 @@ class PLATOProtocol {
             0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
             0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
             0x58, 0x59, 0x5a, 0x29, 0x3a, 0x3f, 0x21, 0x22};
+    private int CWSMode;
+    private int CWScnt;
+    private int CWSfun;
 
     /**
      * Constructor for PLATO protocol.
@@ -339,7 +346,7 @@ class PLATOProtocol {
                     break;
                 case ASCII_R:
                     Log.d(this.getClass().getName(), "Start ext");
-                    setCurrentAscState(ascState.EXT);
+                    setCurrentAscState(ascState.LOAD_EXTERNAL);
                     setAscBytes(0);
                     setDecoded(true);
                     break;
@@ -514,19 +521,31 @@ class PLATOProtocol {
                     setDecoded(true);
                     break;
                 case LOAD_ADDRESS:
-                    n = AssembleData(b);
+                    n = assembleData(b);
                     if (n != -1) {
                         Log.d(this.getClass().getName(), "Load memory address " + n);
                         getPlatoActivity().getRam().setMAR(n & 0x7FFF);
                     }
                     setDecoded(true);
                     break;
-                case EXT:
-
+                case LOAD_EXTERNAL:
+                    n = assembleData(b);
+                    processExt(n);
+                    setDecoded(true);
                 case SSF:
+                    n = assembleData(b);
+                    if (n != -1) {
+                        Log.d(this.getClass().getName(), "SSF " + n);
+                        getPlatoActivity().activateTouchPanel((n & 0x20) != 0);
+                    }
+                    processSSF(n);
                 case FG:
                 case BG:
+                    n = assembleColor(b);
+                    processColor(n);
+                    break;
                 case GSFG:
+                    
                 case PMD:
                 case NONE:
                     processModes();
@@ -538,12 +557,152 @@ class PLATOProtocol {
     }
 
     /**
+     * Process an assembled color word
+     *
+     * @param n a processed color word from assembleColor()
+     */
+    private void processColor(int n) {
+        if (n != -1) {
+            int a = 0xff;
+            int r = (n >> 16) & 0xff;
+            int g = (n >> 8) & 0xff;
+            int b = (n) & 0xff;
+            int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
+            if (getCurrentAscState() == ascState.FG) {
+                Log.d(getClass().getName(), "Setting foreground to: " + c);
+                getPlatoActivity().setCurrentFG(c);
+            } else {
+                Log.d(getClass().getName(), "Setting background to: " + c);
+                getPlatoActivity().setCurrentBG(c);
+            }
+        }
+    }
+
+    /**
+     * Assemble a 24-bit color word
+     *
+     * @param b current byte of input
+     * @return -1 if word not complete yet, otherwise the color word.
+     */
+    private int assembleColor(byte b) {
+        if (getAscBytes() == 0) {
+            assembler = 0;
+        }
+        assembler |= ((b & 0x3F) << (getAscBytes() * 6));
+        if (++ascBytes == 4) {
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            Log.d(this.getClass().getName(), "Assembled colorbyte " + getAssembler());
+            return assembler;
+        } else {
+            Log.d(this.getClass().getName(), "Assembling colorbyte, next byte: " + getAscBytes() + " " + (b & 0x3F));
+        }
+        return -1;
+    }
+
+    /**
+     * Process SSF from assembled data
+     *
+     * @param n value returned from assembleData()
+     */
+    private void processSSF(int n) {
+        switch (n) {
+            case 0x1f00:
+                Log.d(this.getClass().getName(), "Start CWS mode " + n);
+                setCWSMode(1);
+                break;
+            case 0x1d00:
+                Log.d(this.getClass().getName(), "Stop CWS mode " + n);
+                setCWSMode(2);
+                break;
+            case -1:
+                break;
+            default:
+                Log.d(this.getClass().getName(), "SSF " + n);
+                getPlatoActivity().activateTouchPanel((n & 0x20) != 0);
+                break;
+        }
+    }
+
+    /**
+     * Process External load.
+     *
+     * @param n The assembled external data from AssembleData()
+     */
+    private void processExt(int n) {
+        switch (n) {
+            case -1:
+                break;
+            case EXT_CWS_TERMSAVE:
+                getPlatoActivity().cwsTermSave();
+                break;
+            case EXT_CWS_TERMRESTORE:
+                getPlatoActivity().cwsTermRestore();
+                break;
+            default:
+                processNonCWSExt(getCWSMode(), n);
+                break;
+        }
+    }
+
+    /**
+     * Process non CWS ext word
+     *
+     * @param n The assembled external word from AssembleData()
+     */
+    private void processNonCWSExt(int cwsmode, int n) {
+        switch (n) {
+            case 0:
+                setCWScnt(0);
+                processFontExt(n);
+                break;
+            case 1:
+                CWScnt++;
+                if (getCWScnt() == 1 && n == EXT_CWS_SAVE) {
+                    Log.d(this.getClass().getName(), "CWS: specify save function.");
+                } else if (getCWScnt() == 1 && n == EXT_CWS_RESTORE) {
+                    Log.d(this.getClass().getName(), "CWS: specify restore function");
+                } else if (getCWScnt() == 1 || getCWScnt() > 6) {
+                    Log.d(this.getClass().getName(), "CWS: invalid function " + n);
+                    setCWSMode(0);
+                    setCWScnt(0);
+                    setCWSfun(0);
+                } else if (getCWScnt() == 2) {
+                    Log.d(this.getClass().getName(), "CWS: Specify window " + n);
+                } else if (getCWScnt() < 7) {
+                    Log.d(this.getClass().getName(), "CWS: Specify data " + n);
+                }
+            case 2:
+                Log.d(this.getClass().getName(), "CWS: Invalid function");
+        }
+    }
+
+    /**
+     * process a font ext.
+     *
+     * @param n the assembled font ext.
+     */
+    private void processFontExt(int n) {
+        switch (n & 0xFC0) {
+            case 0xA00:      // Font face name and family
+                getPlatoActivity().setFontFaceAndFamily(n & 0x3F);
+                break;
+            case 0xA40:      // Font size
+                getPlatoActivity().setFontSize(n & 0x3F);
+                break;
+            case 0xA80:     // Font flags
+                getPlatoActivity().setFontFlags(n & 0x3F);
+                break;
+        }
+    }
+
+    /**
      * Assemble an 18-bit data word for the ASCII protocol
      *
      * @param b Current byte of input
      * @return -1 if word not complete, yet, otherwise, the word.
      */
-    private int AssembleData(byte b) {
+    private int assembleData(byte b) {
         if (getAscBytes() == 0) {
             assembler = 0;
         }
@@ -697,10 +856,6 @@ class PLATOProtocol {
                 getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
             }
         }
-    }
-
-    private int assembleData(byte b) {
-        return 0;
     }
 
     /**
@@ -906,7 +1061,31 @@ class PLATOProtocol {
         this.pendingEcho = pendingEcho;
     }
 
-    private enum ascState {SSF, EXT, LOAD_ADDRESS, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
+    public int getCWSMode() {
+        return CWSMode;
+    }
+
+    public void setCWSMode(int CWSMode) {
+        this.CWSMode = CWSMode;
+    }
+
+    public int getCWScnt() {
+        return CWScnt;
+    }
+
+    public void setCWScnt(int CWScnt) {
+        this.CWScnt = CWScnt;
+    }
+
+    public int getCWSfun() {
+        return CWSfun;
+    }
+
+    public void setCWSfun(int CWSfun) {
+        this.CWSfun = CWSfun;
+    }
+
+    private enum ascState {SSF, LOAD_EXTERNAL, LOAD_ADDRESS, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
 
 }
 

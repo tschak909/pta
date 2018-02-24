@@ -46,6 +46,7 @@ public class PLATOView extends View {
     private PLATORam ram;
     private boolean modeXOR;
     private PLATOFont mFonts;
+    private boolean touchPanel;
 
 
     public PLATOView(Context context) {
@@ -425,6 +426,38 @@ public class PLATOView extends View {
         mBitmap.setPixels(temp, 0, WIDTH, 0, 0, 511, 495);
     }
 
+    /**
+     * Receive view pixels as a bitmap array.
+     *
+     * @param x1 Starting X position of box to copy
+     * @param y1 Starting Y position of box to copy
+     * @param x2 Ending X position of box to copy
+     * @param y2 Ending Y position of box to copy
+     * @return The resulting bitmap
+     */
+    public int[] getPixels(int x1, int y1, int x2, int y2) {
+        int[] returnedBitmap = new int[x2 * y2 * 4];
+        mBitmap.getPixels(returnedBitmap, 0, WIDTH, x1, y1, x2, y2);
+        return returnedBitmap;
+    }
+
+    /**
+     * Plot view-pixels from bitmap array.
+     *
+     * @param termAreaBitmap
+     * @param x1             Starting X position of box to copy
+     * @param y1             Starting Y position of box to copy
+     * @param x2             Ending X position of box to copy
+     * @param y2             Ending Y position of box to copy
+     */
+    public void setPixels(int[] termAreaBitmap, int x1, int y1, int x2, int y2) {
+        if (termAreaBitmap == null)
+            return;
+
+        mBitmap.setPixels(termAreaBitmap, 0, WIDTH, x1, y1, x2, y2);
+    }
+
+
 /*
     public void doPaint(int x, int y, int pat) {
         // doPaintWalker(x, y, pat, 0);
@@ -520,6 +553,13 @@ public class PLATOView extends View {
         drawChar(MIDDLE_X, MIDDLE_Y, CHARSET_0, CHAR_A, AUTOBS_TEST);
     }
 
+    public boolean isTouchPanel() {
+        return touchPanel;
+    }
+
+    public void setTouchPanel(boolean touchPanel) {
+        this.touchPanel = touchPanel;
+    }
 }
 
 

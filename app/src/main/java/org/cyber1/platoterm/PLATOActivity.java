@@ -152,6 +152,7 @@ public class PLATOActivity extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         }
     };
+    private int[] termAreaBitmap;
     private boolean mVisible;
     private final Runnable mHideRunnable = new Runnable() {
         @Override
@@ -173,6 +174,8 @@ public class PLATOActivity extends AppCompatActivity {
             mBound = false;
         }
     };
+    private int fontSize;
+    private int fontFlags;
 
     public PLATONetworkService getNetworkService() {
         return mService;
@@ -488,5 +491,107 @@ public class PLATOActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * CWS extension: Save term area bitmap for restore later.
+     */
+    public void cwsTermSave() {
+        Log.d(this.getClass().getName(), "CWS Save Term Area");
+        setTermAreaBitmap(mContentView.getPixels(0, 463, 511, 511));
+    }
+
+    public int[] getTermAreaBitmap() {
+        return termAreaBitmap;
+    }
+
+    public void setTermAreaBitmap(int[] termAreaBitmap) {
+        this.termAreaBitmap = termAreaBitmap;
+    }
+
+    public void cwsTermRestore() {
+        if (getTermAreaBitmap() == null)
+            return;
+        mContentView.setPixels(getTermAreaBitmap(), 0, 463, 511, 511);
+    }
+
+    /**
+     * Set font face and family based on assembled ext data
+     *
+     * @param n
+     */
+    public void setFontFaceAndFamily(int n) {
+        switch (n) {
+            case 2:
+                Log.d(this.getClass().getName(), "Font face set to Terminal");
+                break;
+            case 3:
+                Log.d(this.getClass().getName(), "Font face set to UOL8X14");
+                break;
+            case 4:
+                Log.d(this.getClass().getName(), "Font face set to UOL8X16");
+                break;
+            case 5:
+                Log.d(this.getClass().getName(), "Font face set to Courier");
+                break;
+            case 6:
+                Log.d(this.getClass().getName(), "Font face set to Courier New");
+                break;
+            case 16:
+                Log.d(this.getClass().getName(), "Font face set to SSFONT");
+                break;
+            case 17:
+                Log.d(this.getClass().getName(), "Font face set to Times New Roman");
+                break;
+            case 18:
+                Log.d(this.getClass().getName(), "Font face set to Script");
+                break;
+            case 19:
+                Log.d(this.getClass().getName(), "Font face set to MS Sans Serif");
+                break;
+            default:
+                Log.d(this.getClass().getName(), "Font face set to default.");
+        }
+    }
+
+    public int getFontSize() {
+        return fontSize;
+    }
+
+    public void setFontSize(int n) {
+        this.fontSize = (n < 1 ? 1 : (n > 63 ? 63 : n));
+    }
+
+    public int getFontFlags() {
+        return fontFlags;
+    }
+
+    public void setFontFlags(int n) {
+        this.fontFlags = n; // temporary.
+    }
+
+    /**
+     * Activate/Deactivate touch panel.
+     *
+     * @param b true = activate, false = deactivate
+     */
+    public void activateTouchPanel(boolean b) {
+        mContentView.setTouchPanel(b);
+    }
+
+    public int getCurrentFG() {
+        return this.mContentView.getDrawingColorFG();
+    }
+
+    public void setCurrentFG(int currentFG) {
+        this.mContentView.setDrawingColorFG(currentFG);
+    }
+
+    public int getCurrentBG() {
+        return mContentView.getDrawingColorBG();
+    }
+
+    public void setCurrentBG(int currentBG) {
+        this.mContentView.setDrawingColorBG(currentBG);
     }
 }
