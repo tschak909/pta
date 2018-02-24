@@ -13,6 +13,7 @@ class PLATORam {
 
     private static final int MODE = 0x22F6;
     private int[] ram;
+    private int MAR = 0;
 
     PLATORam() {
         ram = new int[0xD000];
@@ -34,4 +35,11 @@ class PLATORam {
         return ram;
     }
 
+    int getMAR() {
+        return MAR;
+    }
+
+    public void setMAR(int newMAR) {
+        this.MAR = newMAR;
+    }
 }

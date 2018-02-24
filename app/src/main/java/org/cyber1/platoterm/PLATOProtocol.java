@@ -72,6 +72,7 @@ class PLATOProtocol {
     private static final byte ASCII_US = 0x1F;
     private static final byte ASCII_SPACE = 0x20;
     private static final int[] ascMode = {0, 3, 2, 1};
+    private static final int ASCTYPE = 12; // Term type, move to protocol abstract class.
     private String protocolError;
     private boolean dumbTerminal;
     private boolean decoded;
@@ -484,6 +485,13 @@ class PLATOProtocol {
                         getPlatoActivity().paint(n);
                     }
                 case LDE_STATUS_REQUEST:
+                    n = assembleData(b);
+                    if (n != -1) {
+                        n &= 0x7F;
+                        n = processStatusRequest(n);
+                    }
+                    setDecoded(true);
+                    break;
                 case LDA:
                 case EXT:
                 case SSF:
@@ -498,6 +506,45 @@ class PLATOProtocol {
             }
         }
 
+    }
+
+    private int processStatusRequest(int n) {
+        switch (n) {
+            case 0x70:
+                n = 0x70 + ASCTYPE;
+                Log.d(this.getClass().getName(), "load echo term type: " + n);
+                break;
+            case 0x71:
+                n = 1; // Temporary.
+                Log.d(this.getClass().getName(), "Get term subtype, returning 1");
+                break;
+            case 0x72:
+                Log.d(this.getClass().getName(), "Load echo loadfile (unused)");
+                n = 0;
+                break;
+            case 0x73:
+                Log.d(this.getClass().getName(), "Load echo termdata");
+                n = 0x40; // Terminal with touch panel, 16K
+                break;
+            case 0x7b:
+                // Beep
+                getPlatoActivity().beep();
+                break;
+            case 0x7d:
+                // Report memory address register.
+                n = getPlatoActivity().getRam().getMAR();
+                Log.d(this.getClass().getName(), "Report MAR: " + n);
+                break;
+            case 0x52:
+                // Enable flow control.
+                
+
+        }
+        return n;
+    }
+
+    private int assembleData(byte b) {
+        return 0;
     }
 
     /**
