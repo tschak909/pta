@@ -82,6 +82,7 @@ class PLATOProtocol {
     private int modeWords; // Word counter for complex mode commands.
     private int lastCoordinateX;
     private int lastCoordinateY;
+    private int assembler; // A temporary value used during byte assembly.
 
 
 //    public int getAscBytes() {
@@ -137,7 +138,7 @@ class PLATOProtocol {
         setAscBytes(0); // Temporary until we get the secondary ascii states done.
     }
 
-    public ascState getCurrentAscState() {
+    private ascState getCurrentAscState() {
         return currentAscState;
     }
 
@@ -469,7 +470,19 @@ class PLATOProtocol {
         if (b >= ASCII_SPACE) {
             switch (getCurrentAscState()) {
                 case LOAD_COORDINATES:
+                    if (assembleCoordinate(b)) {
+                        getPlatoActivity().setCurrentX(getLastCoordinateX());
+                        getPlatoActivity().setCurrentY(getLastCoordinateY());
+                        Log.d(getClass().getName(), "load coordinates: " + getPlatoActivity().getCurrentX() + "," + getPlatoActivity().getCurrentY());
+                    }
+                    setDecoded(true);
+                    break;
                 case PAINT:
+                    int n = assemblePaint(b);
+                    if (n != -1) {
+                        Log.d(getClass().getName(), "paint " + n);
+                        getPlatoActivity().paint(n);
+                    }
                 case LDE_STATUS_REQUEST:
                 case LDA:
                 case EXT:
@@ -485,6 +498,30 @@ class PLATOProtocol {
             }
         }
 
+    }
+
+    /**
+     * Assemble 9-bit paint word for ASCII protocol.
+     *
+     * @param b - current byte.
+     * @return -1 if word not complete yet, otherwise, completed word.
+     */
+    private int assemblePaint(byte b) {
+        if (getAscBytes() == 0) {
+            setAssembler(0);
+        }
+
+        // Done this way because of the cumulative OR.
+        assembler |= ((b & 0x3F) << (getAscBytes() * 6));
+        if (++ascBytes == 2) {
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            Log.d(this.getClass().getName(), "paint: " + assembler);
+            return getAssembler();
+        } else {
+            Log.d(this.getClass().getName(), "Paint byte: " + getAscBytes() + " " + (b & 0x1F));
+        }
+        return -1;
     }
 
     /**
@@ -609,32 +646,40 @@ class PLATOProtocol {
         return modeWords;
     }
 
-    public void setModeWords(int modeWords) {
+    private void setModeWords(int modeWords) {
         this.modeWords = modeWords;
     }
 
-    public int getLastCoordinateX() {
+    private int getLastCoordinateX() {
         return lastCoordinateX;
     }
 
-    public void setLastCoordinateX(int lastCoordinateX) {
+    private void setLastCoordinateX(int lastCoordinateX) {
         this.lastCoordinateX = lastCoordinateX;
     }
 
-    public int getLastCoordinateY() {
+    private int getLastCoordinateY() {
         return lastCoordinateY;
     }
 
-    public void setLastCoordinateY(int lastCoordinateY) {
+    private void setLastCoordinateY(int lastCoordinateY) {
         this.lastCoordinateY = lastCoordinateY;
     }
 
-    public int getAscBytes() {
+    private int getAscBytes() {
         return ascBytes;
     }
 
     private void setAscBytes(int ascBytes) {
         this.ascBytes = ascBytes;
+    }
+
+    public int getAssembler() {
+        return assembler;
+    }
+
+    public void setAssembler(int assembler) {
+        this.assembler = assembler;
     }
 
     private enum ascState {SSF, EXT, LDA, PMD, LDE_STATUS_REQUEST, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}

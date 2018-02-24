@@ -471,4 +471,13 @@ public class PLATOActivity extends AppCompatActivity {
      */
     public void endOfMedium() {
     }
+
+    /**
+     * Paint view at current cursor
+     *
+     * @param n value from assemblePaint()
+     */
+    public void paint(int n) {
+        // TODO: Implement Paint
+    }
 }
