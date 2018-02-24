@@ -545,7 +545,7 @@ class PLATOProtocol {
      */
     private int AssembleData(byte b) {
         if (getAscBytes() == 0) {
-            setAssembler(0);
+            assembler = 0;
         }
         assembler |= ((b & 0x3F) << (getAscBytes() * 6));
         if (++ascBytes == 3) {
@@ -711,7 +711,7 @@ class PLATOProtocol {
      */
     private int assemblePaint(byte b) {
         if (getAscBytes() == 0) {
-            setAssembler(0);
+            assembler = 0;
         }
 
         // Done this way because of the cumulative OR.
@@ -878,19 +878,15 @@ class PLATOProtocol {
         this.ascBytes = ascBytes;
     }
 
-    public int getAssembler() {
+    private int getAssembler() {
         return assembler;
     }
 
-    public void setAssembler(int assembler) {
-        this.assembler = assembler;
-    }
-
-    public boolean getFlowControl() {
+    private boolean getFlowControl() {
         return flowControl;
     }
 
-    public void setFlowControl(boolean flowControl) {
+    private void setFlowControl(boolean flowControl) {
         this.flowControl = flowControl;
     }
 
@@ -898,15 +894,15 @@ class PLATOProtocol {
         return sendFgt;
     }
 
-    public void setSendFgt(boolean sendFgt) {
+    private void setSendFgt(boolean sendFgt) {
         this.sendFgt = sendFgt;
     }
 
-    public int getPendingEcho() {
+    private int getPendingEcho() {
         return pendingEcho;
     }
 
-    public void setPendingEcho(int pendingEcho) {
+    private void setPendingEcho(int pendingEcho) {
         this.pendingEcho = pendingEcho;
     }
 
