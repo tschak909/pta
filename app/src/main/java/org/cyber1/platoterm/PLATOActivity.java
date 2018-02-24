@@ -64,16 +64,6 @@ public class PLATOActivity extends AppCompatActivity {
     PLATONetworkService mService;
     boolean mBound = false;
     PLATOProtocol protocol;
-
-//    private final Handler keytestHandler = new Handler();
-
-//    private final Runnable keytestRunnable = new Runnable() {
-//        @Override
-//        public void run() {
-//            Log.i("PLATOActivity","Smashing NEXT key.");
-//            mService.getToFIFO().addLast((byte)0x0d);
-//        }
-//    };
     /**
      * The runner for handling network data.
      */
@@ -89,6 +79,15 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
 
+//    private final Handler keytestHandler = new Handler();
+
+//    private final Runnable keytestRunnable = new Runnable() {
+//        @Override
+//        public void run() {
+//            Log.i("PLATOActivity","Smashing NEXT key.");
+//            mService.getToFIFO().addLast((byte)0x0d);
+//        }
+//    };
     /**
      * Current X coordinate
      */
@@ -97,52 +96,42 @@ public class PLATOActivity extends AppCompatActivity {
      * Current Y coordinate
      */
     private int currentY;
-
     /**
      * Render text vertically/horizontally
      */
     private boolean verticalWritingMode;
-
     /**
      * Render text in reverse/forward
      */
     private boolean reverseWritingMode;
-
     /**
      * Render text in bold/normal size
      */
     private boolean boldWritingMode;
-
     /**
      * Current X margin
      */
     private int margin;
-
     /**
      * Current Character set
      */
     private int currentCharacterSet;
-
     /**
      * Delta amount for X, typically to specify text cell size, doubled if bold is set
      */
     private int deltaX;
-
     /**
      * Delta amount for Y, typically to specify text cell size, doubled if bold is set
      */
     private int deltaY;
-
     /**
      * Font height (for custom font support), normally, 16 for standard PLATO fonts)
      */
     private int fontheight = 16;
-
     /**
      * The activity's PLATOView
      */
     private PLATOView mContentView;
-
     /**
      * Runnable that hides the task bar after a short delay.
      */
@@ -184,6 +173,10 @@ public class PLATOActivity extends AppCompatActivity {
             mBound = false;
         }
     };
+
+    public PLATONetworkService getNetworkService() {
+        return mService;
+    }
 
     public int getCurrentCharacterSet() {
         return currentCharacterSet;

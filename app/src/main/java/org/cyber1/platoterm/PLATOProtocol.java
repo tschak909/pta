@@ -73,6 +73,9 @@ class PLATOProtocol {
     private static final byte ASCII_SPACE = 0x20;
     private static final int[] ascMode = {0, 3, 2, 1};
     private static final int ASCTYPE = 12; // Term type, move to protocol abstract class.
+    private static final int ASCFEATURES = 0x09; // ASC_WINDOW | ASC_ZFGT
+    private static final int ASCII_XOFF = ASCII_DC1;
+    private static final int ASCII_XON = ASCII_DC3;
     private String protocolError;
     private boolean dumbTerminal;
     private boolean decoded;
@@ -84,7 +87,9 @@ class PLATOProtocol {
     private int lastCoordinateX;
     private int lastCoordinateY;
     private int assembler; // A temporary value used during byte assembly.
-
+    private boolean flowControl; // Flow control enabled, re-map keys.
+    private boolean sendFgt;
+    private int pendingEcho;
 
 //    public int getAscBytes() {
 //        return ascBytes;
@@ -126,6 +131,22 @@ class PLATOProtocol {
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
     };
+    private int[] asciiKeycodes = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+            0x38, 0x39, 0x26, 0x60, 0x0a, 0x5e, 0x2b, 0x2d,
+            0x13, 0x04, 0x07, 0x08, 0x7b, 0x0b, 0x0d, 0x1a,
+            0x02, 0x12, 0x01, 0x03, 0x7d, 0x0c, 0xff, 0xff,
+            0x3c, 0x3e, 0x5b, 0x5d, 0x24, 0x25, 0x5f, 0x7c,
+            0x2a, 0x28, 0x40, 0x27, 0x1c, 0x5c, 0x23, 0x7e,
+            0x17, 0x05, 0x14, 0x19, 0x7f, 0x09, 0x1e, 0x18,
+            0x0e, 0x1d, 0x11, 0x16, 0x00, 0x0f, 0xff, 0xff,
+            0x20, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+            0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+            0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
+            0x78, 0x79, 0x7a, 0x3d, 0x3b, 0x2f, 0x2e, 0x2c,
+            0x1f, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+            0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+            0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
+            0x58, 0x59, 0x5a, 0x29, 0x3a, 0x3f, 0x21, 0x22};
 
     /**
      * Constructor for PLATO protocol.
@@ -364,8 +385,8 @@ class PLATOProtocol {
                     setDecoded(true);
                     break;
                 case ASCII_Y:
-                    Log.d(this.getClass().getName(), "Start LDE_STATUS_REQUEST");
-                    setCurrentAscState(ascState.LDE_STATUS_REQUEST);
+                    Log.d(this.getClass().getName(), "Start LOAD_ECHO");
+                    setCurrentAscState(ascState.LOAD_ECHO);
                     setAscBytes(0);
                     setDecoded(true);
                     break;
@@ -484,11 +505,11 @@ class PLATOProtocol {
                         Log.d(getClass().getName(), "paint " + n);
                         getPlatoActivity().paint(n);
                     }
-                case LDE_STATUS_REQUEST:
+                case LOAD_ECHO:
                     n = assembleData(b);
                     if (n != -1) {
                         n &= 0x7F;
-                        n = processStatusRequest(n);
+                        processEchoRequest(n);
                     }
                     setDecoded(true);
                     break;
@@ -508,7 +529,7 @@ class PLATOProtocol {
 
     }
 
-    private int processStatusRequest(int n) {
+    private void processEchoRequest(int n) {
         switch (n) {
             case 0x70:
                 n = 0x70 + ASCTYPE;
@@ -537,10 +558,115 @@ class PLATOProtocol {
                 break;
             case 0x52:
                 // Enable flow control.
-                
-
+                Log.d(this.getClass().getName(), "Enable Flow Control");
+                setFlowControl(true);
+                break;
+            case 0x60:
+                // Enquire features
+                Log.d(this.getClass().getName(), "Report features " + ASCFEATURES);
+                n += ASCFEATURES;
+                setSendFgt(true);
+                break;
+            default:
+                Log.d(this.getClass().getName(), "Load Echo (unknown)" + n);
         }
-        return n;
+
+        if (n == 0x7b) {
+            // Beep does not send a reply.
+            Log.d(this.getClass().getName(), "Beep. Not sending reply.");
+        }
+        if (getPlatoActivity().getNetworkService() != null && getPlatoActivity().getNetworkService().isRunning()) {
+            n += 0x80;
+            if (getPlatoActivity().getNetworkService().getToFIFO().size() > PLATONetworkService.BUFFER_SIZE_XOFF1) {
+                Log.d(this.getClass().getName(), "Pending echo: " + n + "  Previous was: " + getPendingEcho());
+                setPendingEcho(n);
+            } else {
+                sendProcessedKey(n);
+                setPendingEcho(-1);
+            }
+        }
+    }
+
+    /**
+     * Send a key processed by sendKey() or processEchoRequest()
+     *
+     * @param n The processed key to send.
+     */
+    private void sendProcessedKey(int n) {
+        int[] data = new int[5];
+        int len = 1;
+
+        if (getPlatoActivity().getNetworkService() == null || !getPlatoActivity().getNetworkService().isRunning()) {
+            // Connection isn't there anymore, just return.
+            return;
+        }
+        if (n < 0x80) {
+            // Regular key code.
+            n = asciiKeycodes[n];
+            if (n == 0xff)
+                return;
+            if (getFlowControl()) {
+                switch (n) {
+                    case 0x00:  // ACCESS
+                        n = 0x1d;
+                        len = 2;
+                        break;
+                    case 0x05:  // SHIFT-SUB
+                        n = 0x04;
+                        len = 2;
+                        break;
+                    case 0x0a:  // TAB
+                        n = 0x09;
+                        break;
+                    case 0x11:  // SHIFT-STOP
+                        n = 0x05;
+                        break;
+                    case 0x17:  // SHIFT-SUPER
+                        len = 2;
+                        // fall through
+                    case 0x7C:
+                        n = 0x27;
+                        break;
+                    case 0x27:
+                        n = 0x7C;
+                        break;
+                }
+                data[0] = 0x1B;   // store ESC for two byte codes.
+            }
+            // There was a parity function here, but since it just maps to x, I pulled it.
+            if (len == 1) {
+                Log.d(this.getClass().getName(), "Key to PLATO" + (data[0] & 0xff));
+            } else {
+                Log.d(this.getClass().getName(), "Double key to PLATO " + data[0] + " " + (data[1] & 0xff));
+            }
+            for (int i = 0; i < len; i++) {
+                getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+            }
+        } else if (isDumbTerminal()) {
+            // Ok, the constant referenced here resolves to o01607 (WTF?!)
+            if (n == (ASCII_XOFF + 0x80)) {
+                if (!getFlowControl()) {
+                    return; // Ignore it.
+                }
+                data[0] = ASCII_XOFF;
+                Log.d(this.getClass().getName(), "ASCII mode key to PLATO XOFF in Dumb Terminal Mode.");
+            } else if (n == (ASCII_XON + 0x80)) {
+                if (!getFlowControl()) {
+                    return; // Ignore it.
+                }
+                data[0] = ASCII_XON + 0x80;
+                Log.d(this.getClass().getName(), "ASCII mode key to PLATO XON in dumb terminal mode");
+            } else {
+                len = 3;
+                data[0] = 0x1B;
+                data[1] = (0x40 + (n & 0x3F));
+                data[2] = (0x60 + (n >> 6));
+                Log.d(this.getClass().getName(), "ASCII mode key to PLATO " + (data[0] & 0xFF) + " " + (data[1] & 0xFF) + " " + (data[2] & 0xFF));
+            }
+            for (int i = 0; i < len; i++) {
+                getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+            }
+        }
     }
 
     private int assembleData(byte b) {
@@ -645,6 +771,7 @@ class PLATOProtocol {
                 Log.d(this.getClass().getName(), "Proper STX sequence, setting PLATO mode.");
                 setDumbTerminal(false);
                 setEscape(false);
+                setFlowControl(false);
                 Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Established", Toast.LENGTH_SHORT).show();
                 setDecoded(true);
             }
@@ -729,7 +856,31 @@ class PLATOProtocol {
         this.assembler = assembler;
     }
 
-    private enum ascState {SSF, EXT, LDA, PMD, LDE_STATUS_REQUEST, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
+    public boolean getFlowControl() {
+        return flowControl;
+    }
+
+    public void setFlowControl(boolean flowControl) {
+        this.flowControl = flowControl;
+    }
+
+    public boolean isSendFgt() {
+        return sendFgt;
+    }
+
+    public void setSendFgt(boolean sendFgt) {
+        this.sendFgt = sendFgt;
+    }
+
+    public int getPendingEcho() {
+        return pendingEcho;
+    }
+
+    public void setPendingEcho(int pendingEcho) {
+        this.pendingEcho = pendingEcho;
+    }
+
+    private enum ascState {SSF, EXT, LDA, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
 
 }
 

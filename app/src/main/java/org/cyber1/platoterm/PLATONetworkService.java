@@ -19,7 +19,11 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 public class PLATONetworkService extends Service {
-    private static final int BUFFER_SIZE = 2048;
+    public static final int BUFFER_SIZE = 5120;
+    public static final int BUFFER_SIZE_XON1 = BUFFER_SIZE / 3;
+    public static final int BUFFER_SIZE_XON2 = BUFFER_SIZE / 4;
+    public static final int BUFFER_SIZE_XOFF1 = BUFFER_SIZE - BUFFER_SIZE_XON1;
+    public static final int BUFFER_SIZE_XOFF2 = BUFFER_SIZE - BUFFER_SIZE_XON2;
     private static final String DEFAULT_HOST = "cyberserv.org";
     private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
