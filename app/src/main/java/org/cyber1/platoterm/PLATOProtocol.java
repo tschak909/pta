@@ -79,6 +79,10 @@ class PLATOProtocol {
     private boolean escape;
     private ascState currentAscState;
     private int ascBytes; // Byte counter for complex commands.
+    private int modeWords; // Word counter for complex mode commands.
+    private int lastCoordinateX;
+    private int lastCoordinateY;
+
 
 //    public int getAscBytes() {
 //        return ascBytes;
@@ -139,10 +143,6 @@ class PLATOProtocol {
 
     private void setCurrentAscState(ascState currentAscState) {
         this.currentAscState = currentAscState;
-    }
-
-    private void setAscBytes(int ascBytes) {
-        this.ascBytes = ascBytes;
     }
 
     private String getProtocolError() {
@@ -214,6 +214,7 @@ class PLATOProtocol {
                     Toast.makeText(getPlatoActivity().getApplicationContext(), "Exiting PLATO Mode. Dumb Terminal Mode Enabled.", Toast.LENGTH_SHORT).show();
                     setDumbTerminal(true);
                     setDumbTerminal(true);
+                    setDecoded(true);
                     break;
                 case ASCII_FF:
                     Log.d(this.getClass().getName(), "Erasing screen.");
@@ -361,8 +362,8 @@ class PLATOProtocol {
                     setDecoded(true);
                     break;
                 case ASCII_Y:
-                    Log.d(this.getClass().getName(), "Start LDE");
-                    setCurrentAscState(ascState.LDE);
+                    Log.d(this.getClass().getName(), "Start LDE_STATUS_REQUEST");
+                    setCurrentAscState(ascState.LDE_STATUS_REQUEST);
                     setAscBytes(0);
                     setDecoded(true);
                     break;
@@ -401,26 +402,75 @@ class PLATOProtocol {
                     break;
             }
         } else {
-            // auxiliary ASCII control characters not bolted to escape.
+            // auxiliary non-printable ASCII control characters not bolted to escape.
             switch (b) {
                 case ASCII_BACKSPACE:
+                    Log.d(this.getClass().getName(), "Backspace");
+                    setDecoded(true);
+                    getPlatoActivity().backspace();
+                    break;
                 case ASCII_TAB:
+                    Log.d(this.getClass().getName(), "TAB interpreted as space.");
+                    setDecoded(true);
+                    getPlatoActivity().forwardspace();
+                    break;
                 case ASCII_LF:
+                    Log.d(this.getClass().getName(), "Linefeed");
+                    setDecoded(true);
+                    getPlatoActivity().linefeed();
+                    break;
                 case ASCII_VT:
+                    Log.d(this.getClass().getName(), "Vertical Tab");
+                    setDecoded(true);
+                    getPlatoActivity().verticalTab();
+                    break;
                 case ASCII_FF:
+                    Log.d(this.getClass().getName(), "Form Feed");
+                    setDecoded(true);
+                    getPlatoActivity().formfeed();
+                    break;
                 case ASCII_CR:
+                    Log.d(this.getClass().getName(), "Carriage Return");
+                    setDecoded(true);
+                    getPlatoActivity().carriageReturn();
+                    break;
                 case ASCII_EM:
+                    int mode = ((getPlatoActivity().getRam().getMode() & 3) + (4 << 2));
+                    Log.d(this.getClass().getName(), "EM - Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setModeWords(0);  // Number of words since entring mode
+                    setDecoded(true);
+                    break;
                 case ASCII_FS:
+                    mode = ((getPlatoActivity().getRam().getMode() & 3));
+                    Log.d(this.getClass().getName(), "FS - Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
                 case ASCII_GS:
+                    mode = ((getPlatoActivity().getRam().getMode() & 3) + (1 << 2));
+                    Log.d(this.getClass().getName(), "GS - Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
                 case ASCII_RS:
+                    Log.d(this.getClass().getName(), "RS - PNI_RS Start Download. Ignoring next 3 commands");
+                    setCurrentAscState(ascState.PNI_RS);
+                    setDecoded(true);
+                    break;
                 case ASCII_US:
+                    mode = ((getPlatoActivity().getRam().getMode() & 3) + (3 << 2));
+                    Log.d(this.getClass().getName(), "US - Load Mode " + mode);
+                    getPlatoActivity().getRam().setMode(mode);
+                    setDecoded(true);
+                    break;
             }
         }
         if (b >= ASCII_SPACE) {
             switch (getCurrentAscState()) {
                 case LOAD_COORDINATES:
                 case PAINT:
-                case LDE:
+                case LDE_STATUS_REQUEST:
                 case LDA:
                 case EXT:
                 case SSF:
@@ -429,11 +479,68 @@ class PLATOProtocol {
                 case GSFG:
                 case PMD:
                 case NONE:
+                    processModes();
                 case PNI_RS:
                     break;
             }
         }
 
+    }
+
+    /**
+     * Process PLATO modes 0-7
+     */
+    private void processModes() {
+        switch (getPlatoActivity().getRam().getMode() >> 2) {
+            case 0:  // Dot mode
+            case 1:  // Line mode
+            case 2:  // Load Memory (Character sets)
+            case 3:  // Text mode
+            case 4:  // Block erase mode
+            case 5:  // User program mode?
+            case 6:
+            case 7:
+        }
+    }
+
+    /**
+     * In coordinate mode, take next byte and assemble into the current set of screen coordinates.
+     *
+     * @param b the current byte.
+     * @return true if coordinate is complete, false if coordinate needs another byte.
+     */
+    private boolean assembleCoordinate(byte b) {
+        int coordinate = b & 0x1F; // Mask off top three bits
+
+        switch (b >> 5) // Get control bits 6 and 7
+        {
+            case 1: // High X or High Y
+                if (getAscBytes() == 0) {
+                    // High Y coordinate
+                    Log.d(this.getClass().getName(), "assembleCoordinate: High Y coordinate " + coordinate);
+                    setLastCoordinateY((getLastCoordinateY() & 0x1F) | (coordinate << 5));
+                    setAscBytes(2);
+                } else {
+                    // High X coordinate
+                    Log.d(this.getClass().getName(), "assembleCoordinate: High X coordinate " + coordinate);
+                    setLastCoordinateX((getLastCoordinateX() & 0x1F) | (coordinate << 5));
+                }
+                break;
+            case 2: // Low X
+                int nx = (getLastCoordinateX() & 0x480) | coordinate;
+                setLastCoordinateX(nx);
+                setAscBytes(0);
+                setCurrentAscState(ascState.NONE);
+                Log.d(this.getClass().getName(), "assembleCoordinate: Low X coordinate: " + coordinate + " - lastx: " + getLastCoordinateX() + " - lasty: " + getLastCoordinateY());
+                return true;
+            case 3: // Low Y
+                Log.d(this.getClass().getName(), "assembleCoordinate: Low Y coordinate: " + coordinate);
+                int ny = (getLastCoordinateX() & 0x480) | coordinate;
+                setLastCoordinateY(ny);
+                setAscBytes(2);
+                break;
+        }
+        return false;
     }
 
     /**
@@ -478,6 +585,7 @@ class PLATOProtocol {
             setDecoded(true);
         } else if (b >= 32 && b < 127) // Printable character.
         {
+            // TODO: Properly decode upper case.
             int charToPlot = asciiM0[b];
             if (charToPlot != 0xff) {
                 int charsetToUse = (b & 0x80) >> 7;
@@ -497,7 +605,39 @@ class PLATOProtocol {
         this.dumbTerminal = dumbTerminal;
     }
 
-    private enum ascState {SSF, EXT, LDA, PMD, LDE, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
+    public int getModeWords() {
+        return modeWords;
+    }
+
+    public void setModeWords(int modeWords) {
+        this.modeWords = modeWords;
+    }
+
+    public int getLastCoordinateX() {
+        return lastCoordinateX;
+    }
+
+    public void setLastCoordinateX(int lastCoordinateX) {
+        this.lastCoordinateX = lastCoordinateX;
+    }
+
+    public int getLastCoordinateY() {
+        return lastCoordinateY;
+    }
+
+    public void setLastCoordinateY(int lastCoordinateY) {
+        this.lastCoordinateY = lastCoordinateY;
+    }
+
+    public int getAscBytes() {
+        return ascBytes;
+    }
+
+    private void setAscBytes(int ascBytes) {
+        this.ascBytes = ascBytes;
+    }
+
+    private enum ascState {SSF, EXT, LDA, PMD, LDE_STATUS_REQUEST, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
 
 }
 

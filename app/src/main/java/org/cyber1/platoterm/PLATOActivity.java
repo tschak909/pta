@@ -32,6 +32,17 @@ public class PLATOActivity extends AppCompatActivity {
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
+
+    /**
+     * PLATO Coordinate representing the leftmost screen coordinate.
+     */
+    private static final int SCREEN_LEFT = 0;
+
+    /**
+     * PLATO Coordinate representing the topmost screen coordinate.
+     */
+    private static final int SCREEN_TOP = 511;
+
     /**
      * This is a handler for pulling the latest data from the network service
      */
@@ -99,9 +110,39 @@ public class PLATOActivity extends AppCompatActivity {
      */
     private boolean boldWritingMode;
 
+    /**
+     * Current X margin
+     */
     private int margin;
+
+    /**
+     * Current Character set
+     */
     private int currentCharacterSet;
+
+    /**
+     * Delta amount for X, typically to specify text cell size, doubled if bold is set
+     */
+    private int deltaX;
+
+    /**
+     * Delta amount for Y, typically to specify text cell size, doubled if bold is set
+     */
+    private int deltaY;
+
+    /**
+     * Font height (for custom font support), normally, 16 for standard PLATO fonts)
+     */
+    private int fontheight = 16;
+
+    /**
+     * The activity's PLATOView
+     */
     private PLATOView mContentView;
+
+    /**
+     * Runnable that hides the task bar after a short delay.
+     */
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
         @Override
@@ -341,6 +382,13 @@ public class PLATOActivity extends AppCompatActivity {
 
     public void setBoldWritingMode(boolean boldWritingMode) {
         this.boldWritingMode = boldWritingMode;
+        if (boldWritingMode) {
+            setDeltaX(getDeltaX() * 2);
+            setDeltaY(getDeltaY() * 2);
+        } else {
+            setDeltaX(8);
+            setDeltaY(getFontHeight());
+        }
     }
 
     public int getMargin() {
@@ -349,5 +397,78 @@ public class PLATOActivity extends AppCompatActivity {
 
     public void setMargin(int margin) {
         this.margin = margin;
+    }
+
+    /**
+     * Back up cursor one character cell.
+     */
+    public void backspace() {
+        setCurrentX(getCurrentX() - getDeltaX());
+    }
+
+    public int getDeltaX() {
+        return deltaX;
+    }
+
+    public void setDeltaX(int deltaX) {
+        this.deltaX = deltaX;
+    }
+
+    public int getDeltaY() {
+        return deltaY;
+    }
+
+    public void setDeltaY(int deltaY) {
+        this.deltaY = deltaY;
+    }
+
+    public int getFontHeight() {
+        return fontheight;
+    }
+
+    public void setFontHeight(int fontheight) {
+        this.fontheight = fontheight;
+    }
+
+    /**
+     * Move cursor forward one space.
+     */
+    public void forwardspace() {
+        setCurrentX(getCurrentX() + getDeltaX());
+    }
+
+    /**
+     * Move cursor down one space.
+     */
+    public void linefeed() {
+        setCurrentY(getCurrentY() + getDeltaY());
+    }
+
+    /**
+     * Move cursor up one space.
+     */
+    public void verticalTab() {
+        setCurrentY(getCurrentY() - getDeltaY());
+    }
+
+    /**
+     * Form feed - move cursor to the top of page (0,511)
+     */
+    public void formfeed() {
+        setCurrentX(SCREEN_LEFT);
+        setCurrentY(SCREEN_TOP);
+    }
+
+    /**
+     * Carriage Return - move cursor to beginning of line + current margin.
+     */
+    public void carriageReturn() {
+        setCurrentX(SCREEN_LEFT + getMargin());
+    }
+
+    /**
+     * End of Medium - Select block write/erase mode (mode 4)
+     */
+    public void endOfMedium() {
     }
 }
