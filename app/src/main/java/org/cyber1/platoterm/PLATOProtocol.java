@@ -545,7 +545,9 @@ class PLATOProtocol {
                     processColor(n);
                     break;
                 case GSFG:
-                    
+                    n = assembleGrayscale(b);
+                    processGrayscale(n);
+                    break;
                 case PMD:
                 case NONE:
                     processModes();
@@ -554,6 +556,42 @@ class PLATOProtocol {
             }
         }
 
+    }
+
+    private void processGrayscale(int n) {
+        if (n != 1) {
+            int a = 0xFF;
+            int r = (n & 0xFF);
+            int g = (n & 0xFF);
+            int b = (n & 0xFF);
+            int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
+            if (getCurrentAscState() == ascState.GSFG) {
+                Log.d(this.getClass().getName(), "set grayscale foreground color: " + c);
+                getPlatoActivity().setCurrentFG(c);
+            }
+        }
+    }
+
+    /**
+     * Assemble a 7 bit grayscale word for the ASCII protocol
+     *
+     * @param b the current byte
+     * @return -1 if word not complete yet, otherwise the color word
+     */
+    private int assembleGrayscale(byte b) {
+        if (getAscBytes() == 0) {
+            assembler = 0;
+        }
+        assembler = (b & 0x3F) << 2;
+        if (++ascBytes == 1) {
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            Log.d(this.getClass().getName(), "Grayscale color: " + assembler);
+            return getAssembler();
+        } else {
+            Log.d(this.getClass().getName(), "Grayscale color byte " + getAscBytes() + " " + (b & 0x7F));
+        }
+        return -1;
     }
 
     /**
