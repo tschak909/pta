@@ -138,7 +138,9 @@ public class PLATONetworkService extends Service {
             try {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
-                    getFromFIFO().addLast((byte) is.read());
+                    byte b = (byte) (is.read() & 0x7F);
+                    Log.d(this.getClass().getName(), "Byte in: 0x" + (String.format("%02X", b)));
+                    getFromFIFO().addLast(b);
                 }
 
                 // Drain the output FIFO

@@ -444,7 +444,7 @@ public class PLATOView extends View {
     /**
      * Plot view-pixels from bitmap array.
      *
-     * @param termAreaBitmap
+     * @param termAreaBitmap Bitmap to copy in.
      * @param x1             Starting X position of box to copy
      * @param y1             Starting Y position of box to copy
      * @param x2             Ending X position of box to copy

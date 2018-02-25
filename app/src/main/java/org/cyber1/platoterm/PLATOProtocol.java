@@ -80,6 +80,7 @@ class PLATOProtocol {
     private static final int EXT_CWS_TERMRESTORE = 2001;
     private static final int EXT_CWS_SAVE = 0;
     private static final int EXT_CWS_RESTORE = 1;
+    private static final byte ASCII_NUL = 0x00;
     private String protocolError;
     private boolean dumbTerminal;
     private boolean decoded;
@@ -225,7 +226,7 @@ class PLATOProtocol {
             Log.d(this.getClass().getName(), "Protocol Error: " + getProtocolError());
             setProtocolError("");
         } else if (!isDecoded()) {
-            Log.d(this.getClass().getName(), "Undecoded byte: " + (b & 0xFF));
+            Log.d(this.getClass().getName(), "Undecoded byte: " + String.format("%02X", (b & 0xFF)));
         }
     }
 
@@ -262,6 +263,7 @@ class PLATOProtocol {
                     processPLATOMetaData();
                 }
             }
+            setDecoded(true);
         } else if (isEscape()) {
             setEscape(false);
             switch (b) {
@@ -464,6 +466,15 @@ class PLATOProtocol {
         } else {
             // auxiliary non-printable ASCII control characters not bolted to escape.
             switch (b) {
+                case ASCII_NUL:
+                    Log.d(this.getClass().getName(), "NULL - Delay?");
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    setDecoded(true);
+                    break;
                 case ASCII_BACKSPACE:
                     Log.d(this.getClass().getName(), "Backspace");
                     setDecoded(true);
@@ -542,6 +553,8 @@ class PLATOProtocol {
                         Log.d(getClass().getName(), "paint " + n);
                         getPlatoActivity().paint(n);
                     }
+                    setDecoded(true);
+                    break;
                 case LOAD_ECHO:
                     n = assembleData(b);
                     if (n != -1) {
@@ -569,20 +582,27 @@ class PLATOProtocol {
                         getPlatoActivity().activateTouchPanel((n & 0x20) != 0);
                     }
                     processSSF(n);
+                    break;
                 case FG:
                 case BG:
                     n = assembleColor(b);
                     processColor(n);
+                    setDecoded(true);
                     break;
                 case GSFG:
                     n = assembleGrayscale(b);
                     processGrayscale(n);
+                    setDecoded(true);
                     break;
                 case PMD:
+                    setDecoded(true);
                     break; // handled above.
                 case NONE:
                     processModes(b);
+                    setDecoded(true);
+                    break;
                 case PNI_RS:
+                    setDecoded(true);
                     break;
             }
         }
