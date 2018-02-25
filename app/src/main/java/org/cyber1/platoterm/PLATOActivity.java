@@ -580,11 +580,11 @@ public class PLATOActivity extends AppCompatActivity {
     }
 
     public int getCurrentFG() {
-        return this.mContentView.getDrawingColorFG();
+        return mContentView.getDrawingColorFG();
     }
 
     public void setCurrentFG(int currentFG) {
-        this.mContentView.setDrawingColorFG(currentFG);
+        mContentView.setDrawingColorFG(currentFG);
     }
 
     public int getCurrentBG() {
@@ -595,4 +595,25 @@ public class PLATOActivity extends AppCompatActivity {
         this.mContentView.setDrawingColorBG(currentBG);
     }
 
+    /**
+     * Draw point onto canvas in current FG color.
+     *
+     * @param x X coordinate (0-511)
+     * @param y Y coordinate (0-511)
+     */
+    public void drawPoint(int x, int y) {
+        mContentView.setPoint(x, y, getCurrentFG(), mContentView.isModeXOR());
+    }
+
+    /**
+     * Draw line onto canvas in current FG color
+     *
+     * @param currentX current X coordinate (0-511)
+     * @param currentY current Y coordinate (0-511)
+     * @param x        destination X coordinate (0-511)
+     * @param y        destination Y coordinate (0-511)
+     */
+    public void plotLine(int currentX, int currentY, int x, int y) {
+        mContentView.plotLine(currentX, currentY, x, y);
+    }
 }

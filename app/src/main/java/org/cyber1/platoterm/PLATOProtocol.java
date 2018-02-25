@@ -581,7 +581,7 @@ class PLATOProtocol {
                 case PMD:
                     break; // handled above.
                 case NONE:
-                    processModes();
+                    processModes(b);
                 case PNI_RS:
                     break;
             }
@@ -1051,18 +1051,146 @@ class PLATOProtocol {
 
     /**
      * Process PLATO modes 0-7
+     * @param b
      */
-    private void processModes() {
+    private void processModes(byte b) {
         switch (getPlatoActivity().getRam().getMode() >> 2) {
             case 0:  // Dot mode
+                if (assembleCoordinate(b)) {
+                    mode0((getLastCoordinateX() << 9) + getLastCoordinateY());
+                    setDecoded(true);
+                }
+                break;
             case 1:  // Line mode
+                if (assembleCoordinate(b)) {
+                    mode1((getLastCoordinateX() << 9) + getLastCoordinateY());
+                    setDecoded(true);
+                }
+                break;
             case 2:  // Load Memory (Character sets)
+                int n = assembleData(b);
+                if (n != -1)
+                    mode2(n);
+                setDecoded(true);
+                break;
             case 3:  // Text mode
+                setCurrentAscState(ascState.NONE);
+                setAscBytes(0);
+                int i = getPlatoActivity().getCurrentCharacterSet();
+                if (i == 0) {
+                    b = (byte) asciiM0[b];
+                    i = (b & 0x80) >> 7;
+                } else if (i == 1) {
+                    b = (byte) asciiM1[b];
+                    i = (b & 0x80) >> 7;
+                } else {
+                    b = (byte) ((b - 0x20) & 0x3F);
+                }
+                if (b != (byte) 0xff) {
+                    b &= 0x7F;
+                    getPlatoActivity().drawChar(i, b);
+                    getPlatoActivity().setCurrentX(getPlatoActivity().getCurrentX() + getPlatoActivity().getDeltaX());
+                }
+                setDecoded(true);
+                break;
             case 4:  // Block erase mode
+                if (assembleCoordinate(b)) {
+                    mode4((getLastCoordinateX() << 9));
+                }
+                setDecoded(true);
+                break;
             case 5:  // User program mode?
-            case 6:
-            case 7:
+                n = assembleData(b);
+                if (n != 1)
+                    mode5(n);
+                break;
+            case 6:  // User Program mode
+                n = assembleData(b);
+                if (n != 1)
+                    mode6(n);
+                break;
+            case 7:  // User program mode
+                n = assembleData(b);
+                if (n != 1)
+                    mode7(n);
+                break;
         }
+    }
+
+    /**
+     * Process mode 7 data word
+     *
+     * @param n data word
+     */
+    private void mode7(int n) {
+
+    }
+
+    /**
+     * Process mode 6 data word
+     *
+     * @param n data word
+     */
+    private void mode6(int n) {
+
+    }
+
+    /**
+     * Process mode 5 Data word
+     *
+     * @param n data word
+     */
+    private void mode5(int n) {
+
+    }
+
+    /**
+     * Process mode 4 (block erase) data word.
+     *
+     * @param i Data word
+     */
+    private void mode4(int i) {
+
+    }
+
+    /**
+     * Process Mode 2 (load memory) data word.
+     *
+     * @param n Data word
+     */
+    private void mode2(int n) {
+
+    }
+
+    /**
+     * Process mode 1 (plot line) data word.
+     *
+     * @param i Data word.
+     */
+    private void mode1(int i) {
+        int x, y;
+
+        x = (i >> 9) & 0777;
+        y = i & 0777;
+        Log.d(getClass().getName(), "lineto X:" + x + " Y:" + y);
+        getPlatoActivity().plotLine(getPlatoActivity().getCurrentX(), getPlatoActivity().getCurrentY(), x, y);
+        getPlatoActivity().setCurrentX(x);
+        getPlatoActivity().setCurrentY(y);
+    }
+
+    /**
+     * Process mode 0 (plot dot) data word.
+     *
+     * @param i data word
+     */
+    private void mode0(int i) {
+        int x, y;
+        x = (i >> 9) & 0x1FF;
+        y = i & 0x1FF;
+        Log.d(this.getClass().getName(), "mode 0 plot x: " + x + " y: " + y);
+        getPlatoActivity().drawPoint(x, y);
+        getPlatoActivity().setCurrentX(x);
+        getPlatoActivity().setCurrentY(y);
     }
 
     /**
@@ -1228,19 +1356,19 @@ class PLATOProtocol {
         this.pendingEcho = pendingEcho;
     }
 
-    public int getCWSMode() {
+    private int getCWSMode() {
         return CWSMode;
     }
 
-    public void setCWSMode(int CWSMode) {
+    private void setCWSMode(int CWSMode) {
         this.CWSMode = CWSMode;
     }
 
-    public int getCWScnt() {
+    private int getCWScnt() {
         return CWScnt;
     }
 
-    public void setCWScnt(int CWScnt) {
+    private void setCWScnt(int CWScnt) {
         this.CWScnt = CWScnt;
     }
 
@@ -1248,11 +1376,11 @@ class PLATOProtocol {
         return CWSfun;
     }
 
-    public void setCWSfun(int CWSfun) {
+    private void setCWSfun(int CWSfun) {
         this.CWSfun = CWSfun;
     }
 
-    public boolean getFontPMD() {
+    private boolean getFontPMD() {
         return fontPMD;
     }
 
@@ -1260,11 +1388,11 @@ class PLATOProtocol {
         return fontPMD;
     }
 
-    public void setFontPMD(boolean fontPMD) {
+    private void setFontPMD(boolean fontPMD) {
         this.fontPMD = fontPMD;
     }
 
-    public boolean getFontInfo() {
+    private boolean getFontInfo() {
         return fontInfo;
     }
 
@@ -1272,11 +1400,11 @@ class PLATOProtocol {
         return fontInfo;
     }
 
-    public void setFontInfo(boolean fontInfo) {
+    private void setFontInfo(boolean fontInfo) {
         this.fontInfo = fontInfo;
     }
 
-    public boolean getosInfo() {
+    private boolean getosInfo() {
         return osInfo;
     }
 
@@ -1284,7 +1412,7 @@ class PLATOProtocol {
         return osInfo;
     }
 
-    public void setOsInfo(boolean osInfo) {
+    private void setOsInfo(boolean osInfo) {
         this.osInfo = osInfo;
     }
 
@@ -1292,11 +1420,11 @@ class PLATOProtocol {
         return PMD;
     }
 
-    public void setPMD(String PMD) {
+    private void setPMD(String PMD) {
         this.PMD = PMD;
     }
 
-    public int getFontWidth() {
+    private int getFontWidth() {
         return fontWidth;
     }
 
@@ -1304,7 +1432,7 @@ class PLATOProtocol {
         this.fontWidth = fontWidth;
     }
 
-    public int getFontHeight() {
+    private int getFontHeight() {
         return fontHeight;
     }
 
