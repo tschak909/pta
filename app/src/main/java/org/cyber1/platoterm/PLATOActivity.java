@@ -594,4 +594,5 @@ public class PLATOActivity extends AppCompatActivity {
     public void setCurrentBG(int currentBG) {
         this.mContentView.setDrawingColorBG(currentBG);
     }
+
 }

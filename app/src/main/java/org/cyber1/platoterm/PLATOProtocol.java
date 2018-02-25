@@ -154,6 +154,12 @@ class PLATOProtocol {
     private int CWSMode;
     private int CWScnt;
     private int CWSfun;
+    private boolean fontPMD;
+    private boolean fontInfo;
+    private boolean osInfo;
+    private String PMD;
+    private int fontWidth;
+    private int fontHeight;
 
     /**
      * Constructor for PLATO protocol.
@@ -232,7 +238,31 @@ class PLATOProtocol {
         if (b == ASCII_ESCAPE)
             setEscape(true);
 
-        if (isEscape()) {
+        if (getCurrentAscState() == ascState.PNI_RS) {
+            // Ignore the next three bytes.
+            if (++ascBytes == 3) {
+                setAscBytes(0);
+                setCurrentAscState(ascState.NONE);
+            }
+            setDecoded(true);
+        } else if (getCurrentAscState() == ascState.PMD) {
+            int n = AssembleASCIIPLATOMetadata(b);
+            if (n == 0) {
+                if (getFontPMD()) {
+                    Log.d(this.getClass().getName(), "PLATO metadata font data...");
+                    setFontPMD(false);
+                } else if (getFontInfo()) {
+                    Log.d(this.getClass().getName(), "PLATO metadata font data info...");
+                    setFontInfo(false);
+                } else if (getosInfo()) {
+                    Log.d(this.getClass().getName(), "PLATO metadata get operating system info...");
+                    setOsInfo(false);
+                } else {
+                    Log.d(this.getClass().getName(), "PLATO metadata complete...");
+                    processPLATOMetaData();
+                }
+            }
+        } else if (isEscape()) {
             setEscape(false);
             switch (b) {
                 case ASCII_STX:
@@ -549,6 +579,7 @@ class PLATOProtocol {
                     processGrayscale(n);
                     break;
                 case PMD:
+                    break; // handled above.
                 case NONE:
                     processModes();
                 case PNI_RS:
@@ -556,6 +587,104 @@ class PLATOProtocol {
             }
         }
 
+    }
+
+
+    private void processPLATOMetaData() {
+
+    }
+
+    /**
+     * Assemble a string for use as extended data from PLATO
+     * sent in ASCII connection mode.
+     */
+    private int AssembleASCIIPLATOMetadata(byte b) {
+        int ob = b;
+
+        Log.d(this.getClass().getName(), "PLATO Metadata assemble: " + b + " (counter=" + getAscBytes() + 1);
+        b &= 0x3F;
+        if (getAscBytes() == 0) {
+            setPMD("");
+        }
+        ascBytes++;
+        if (ob == 'F' && getAscBytes() == 1)
+            setFontPMD(true);
+        else if (ob == 'f' && getAscBytes() == 1) {
+            setFontInfo(true);
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            sendEXT(getFontWidth());
+            sendEXT(getFontHeight());
+            return 0;
+        } else if (ob == 'o' && getAscBytes() == 1) {
+            // Sends 3 external keys, OS, major version, minor version
+            sendEXT(0);
+            sendEXT(0);
+            sendEXT(0);
+            setOsInfo(true);
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+        } else if (getFontPMD() && getAscBytes() == 2) {
+            // TODO: add call to set font face and family
+            if (b == 0) {
+                setAscBytes(0);
+                setCurrentAscState(ascState.NONE);
+                return 0;
+            }
+        } else if (getFontPMD() && getAscBytes() == 3) {
+            // TODO: CALL TO SET FONT SIZE
+            Log.d(getClass().getName(), "set font size with getascbytes == 3");
+        } else if (getFontPMD() && getAscBytes() == 4) {
+            // TODO: CALLS TO SETFONTFLAGS, SETFONTACTIVE
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            return 0;
+        } else if (b == 0 || getAscBytes() == 1001) {
+            if (getAscBytes() == 1001)
+                Log.d(getClass().getName(), "PLATO meta data limit reached.");
+            setAscBytes(0);
+            setCurrentAscState(ascState.NONE);
+            return 0;
+        } else {
+            if (b >= 1 && b <= 26) {
+                PMD += Byte.toString((byte) (b + 97 - 1));
+            } else if (b >= 27 && b <= 36) {
+                PMD += Byte.toString((byte) (48 + b - 27));
+            } else if (b == 38) {
+                PMD += "-";
+            } else if (b == 40) {
+                PMD += "/";
+            } else if (b == 44) {
+                PMD += "=";
+            } else if (b == 45) {
+                PMD += " ";
+            } else if (b == 63) {
+                PMD += ";";
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Translate and Send extended metadata back to PLATO
+     *
+     * @param key The "response" to send back.
+     */
+    private void sendEXT(int key) {
+        int[] data = new int[3];
+
+        if (!getPlatoActivity().getNetworkService().isRunning()) {
+            Log.d(this.getClass().getName(), "sendEXT called when network service not running.");
+            return;
+        }
+        // Send external key
+        data[0] = 0x1B; // ESC
+        data[1] = 0x40 | (key & 0x3F);
+        data[2] = 0x68 | ((key >> 6) & 0x03);
+        for (int i = 0; i < 3; i++) {
+            Log.d(this.getClass().getName(), "sendEXT sent byte to PLATO." + data[i]);
+            getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+        }
     }
 
     private void processGrayscale(int n) {
@@ -1121,6 +1250,66 @@ class PLATOProtocol {
 
     public void setCWSfun(int CWSfun) {
         this.CWSfun = CWSfun;
+    }
+
+    public boolean getFontPMD() {
+        return fontPMD;
+    }
+
+    public boolean isFontPMD() {
+        return fontPMD;
+    }
+
+    public void setFontPMD(boolean fontPMD) {
+        this.fontPMD = fontPMD;
+    }
+
+    public boolean getFontInfo() {
+        return fontInfo;
+    }
+
+    public boolean isFontInfo() {
+        return fontInfo;
+    }
+
+    public void setFontInfo(boolean fontInfo) {
+        this.fontInfo = fontInfo;
+    }
+
+    public boolean getosInfo() {
+        return osInfo;
+    }
+
+    public boolean isOsInfo() {
+        return osInfo;
+    }
+
+    public void setOsInfo(boolean osInfo) {
+        this.osInfo = osInfo;
+    }
+
+    public String getPMD() {
+        return PMD;
+    }
+
+    public void setPMD(String PMD) {
+        this.PMD = PMD;
+    }
+
+    public int getFontWidth() {
+        return fontWidth;
+    }
+
+    public void setFontWidth(int fontWidth) {
+        this.fontWidth = fontWidth;
+    }
+
+    public int getFontHeight() {
+        return fontHeight;
+    }
+
+    public void setFontHeight(int fontHeight) {
+        this.fontHeight = fontHeight;
     }
 
     private enum ascState {SSF, LOAD_EXTERNAL, LOAD_ADDRESS, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}
