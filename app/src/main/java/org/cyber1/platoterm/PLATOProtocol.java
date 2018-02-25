@@ -225,7 +225,7 @@ class PLATOProtocol {
             Log.d(this.getClass().getName(), "Protocol Error: " + getProtocolError());
             setProtocolError("");
         } else if (!isDecoded()) {
-            Log.d(this.getClass().getName(), "Undecoded byte: " + b);
+            Log.d(this.getClass().getName(), "Undecoded byte: " + (b & 0xFF));
         }
     }
 
@@ -235,10 +235,10 @@ class PLATOProtocol {
      * @param b Byte to be decoded.
      */
     private void decodePLATOByte(byte b) {
-        if (b == ASCII_ESCAPE)
+        if (b == ASCII_ESCAPE) {
             setEscape(true);
-
-        if (getCurrentAscState() == ascState.PNI_RS) {
+            setDecoded(true);
+        } else if (getCurrentAscState() == ascState.PNI_RS) {
             // Ignore the next three bytes.
             if (++ascBytes == 3) {
                 setAscBytes(0);
@@ -877,7 +877,7 @@ class PLATOProtocol {
         if (++ascBytes == 3) {
             setAscBytes(0);
             setCurrentAscState(ascState.NONE);
-            Log.d(this.getClass().getName(), "Assemble data: byte offset:" + getAscBytes() + " value:" + (b & 0x3F));
+            Log.d(this.getClass().getName(), "Assemble data: byte offset:" + getAscBytes() + " value:" + (b & 0x3F) + " :: " + getAssembler());
             return getAssembler();
         } else {
             Log.d(this.getClass().getName(), "Assembling data: byte offset:" + getAscBytes() + " value:" + (b & 0x3F));
@@ -931,16 +931,19 @@ class PLATOProtocol {
             // Beep does not send a reply.
             Log.d(this.getClass().getName(), "Beep. Not sending reply.");
         }
-        if (getPlatoActivity().getNetworkService() != null && getPlatoActivity().getNetworkService().isRunning()) {
-            n += 0x80;
-            if (getPlatoActivity().getNetworkService().getToFIFO().size() > PLATONetworkService.BUFFER_SIZE_XOFF1) {
-                Log.d(this.getClass().getName(), "Pending echo: " + n + "  Previous was: " + getPendingEcho());
-                setPendingEcho(n);
-            } else {
-                sendProcessedKey(n);
-                setPendingEcho(-1);
-            }
-        }
+//        if (getPlatoActivity().getNetworkService() != null && getPlatoActivity().getNetworkService().isRunning()) {
+//            n += 0x80;
+//            if (getPlatoActivity().getNetworkService().getToFIFO().size() > PLATONetworkService.BUFFER_SIZE_XOFF1) {
+//                Log.d(this.getClass().getName(), "Pending echo: " + n + "  Previous was: " + getPendingEcho());
+//                setPendingEcho(n);
+//            } else {
+//                sendProcessedKey(n);
+//                setPendingEcho(-1);
+//            }
+//        }
+        n += 0x80;
+        sendProcessedKey(n);
+        setPendingEcho(-1);
     }
 
     /**
@@ -948,7 +951,7 @@ class PLATOProtocol {
      *
      * @param n The processed key to send.
      */
-    private void sendProcessedKey(int n) {
+    public void sendProcessedKey(int n) {
         int[] data = new int[5];
         int len = 1;
 
@@ -989,6 +992,7 @@ class PLATOProtocol {
                 }
                 data[0] = 0x1B;   // store ESC for two byte codes.
             }
+            data[len - 1] = n;
             // There was a parity function here, but since it just maps to x, I pulled it.
             if (len == 1) {
                 Log.d(this.getClass().getName(), "Key to PLATO" + (data[0] & 0xff));
@@ -1022,6 +1026,14 @@ class PLATOProtocol {
             for (int i = 0; i < len; i++) {
                 getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
             }
+        } else {
+            data[0] = n >> 7;
+            data[1] = 0x80 | n;
+            len = 2;
+            for (int i = 0; i < len; i++) {
+                getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+            }
+
         }
     }
 

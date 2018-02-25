@@ -61,33 +61,17 @@ public class PLATOActivity extends AppCompatActivity {
             }
         }
     };
+    private final Handler keytestHandler = new Handler();
     PLATONetworkService mService;
     boolean mBound = false;
     PLATOProtocol protocol;
-    /**
-     * The runner for handling network data.
-     */
-    private final Runnable networkRunnable = new Runnable() {
+    private final Runnable keytestRunnable = new Runnable() {
         @Override
         public void run() {
-            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
-                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
-                    processData(mService.getFromFIFO().popFirst());
-                }
-            }
-            networkHandler.post(networkRunnable);
+            Log.d("PLATOActivity", "Smashing NEXT key.");
+            protocol.sendProcessedKey(0x16);
         }
     };
-
-//    private final Handler keytestHandler = new Handler();
-
-//    private final Runnable keytestRunnable = new Runnable() {
-//        @Override
-//        public void run() {
-//            Log.i("PLATOActivity","Smashing NEXT key.");
-//            mService.getToFIFO().addLast((byte)0x0d);
-//        }
-//    };
     /**
      * Current X coordinate
      */
@@ -132,6 +116,21 @@ public class PLATOActivity extends AppCompatActivity {
      * The activity's PLATOView
      */
     private PLATOView mContentView;
+    /**
+     * The runner for handling network data.
+     */
+    private final Runnable networkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
+                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
+                    processData(mService.getFromFIFO().popFirst());
+                    mContentView.invalidate();
+                }
+            }
+            networkHandler.post(networkRunnable);
+        }
+    };
     /**
      * Runnable that hides the task bar after a short delay.
      */
@@ -257,6 +256,11 @@ public class PLATOActivity extends AppCompatActivity {
 
         mContentView.setDrawingColorFG(0xFFFFFFFF);
         mContentView.setDrawingColorBG(0x00000000);
+        mContentView.setModeXOR(false);
+        setBoldWritingMode(false);
+        setDeltaX(0);
+        setDeltaY(0);
+        setFontHeight(8);
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
@@ -280,7 +284,7 @@ public class PLATOActivity extends AppCompatActivity {
         }
 
         networkHandler.post(networkRunnable);
-        // keytestHandler.postDelayed(keytestRunnable,6000);
+        keytestHandler.postDelayed(keytestRunnable, 6000);
 
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
@@ -386,7 +390,7 @@ public class PLATOActivity extends AppCompatActivity {
             setDeltaY(getDeltaY() * 2);
         } else {
             setDeltaX(8);
-            setDeltaY(getFontHeight());
+            setDeltaY(8);
         }
     }
 

@@ -223,7 +223,7 @@ public class PLATOView extends View {
             dy = -dy;
             sy = -1;
         } else {
-            sx = 1;
+            sy = 1;
         }
         dx <<= 1;
         dy <<= 1;
