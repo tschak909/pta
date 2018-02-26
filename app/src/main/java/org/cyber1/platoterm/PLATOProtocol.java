@@ -248,8 +248,9 @@ class PLATOProtocol {
         } else if (isEscape()) {
             setEscape(false);
             processEscapeSequence(b);
-        } else {
+        } else if (b < 0x20) {
             processControlCharacters(b);
+        } else {
             processOtherStates(b);
         }
 
