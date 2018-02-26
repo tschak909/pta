@@ -1055,7 +1055,7 @@ class PLATOProtocol {
             for (int i = 0; i < len; i++) {
                 getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
             }
-        } else if (!isDumbTerminal()) {
+        } else if (isDumbTerminal()) {
             // Ok, the constant referenced here resolves to o01607 (WTF?!)
             if (n == (ASCII_XOFF + 0x80)) {
                 if (!getFlowControl()) {
@@ -1139,24 +1139,7 @@ class PLATOProtocol {
                 setDecoded(true);
                 break;
             case 3:  // Text mode
-                setCurrentAscState(ascState.NONE);
-                setAscBytes(0);
-                int i = getPlatoActivity().getCurrentCharacterSet();
-                if (i == 0) {
-                    b = (byte) asciiM0[b];
-                    i = (b & 0x80) >> 7;
-                } else if (i == 1) {
-                    b = (byte) asciiM1[b];
-                    i = (b & 0x80) >> 7;
-                } else {
-                    b = (byte) ((b - 0x20) & 0x3F);
-                    // TODO: Come back here and split this out for charsets 2 and 3.
-                }
-                if (b != (byte) 0xff) {
-                    b &= 0x7F;
-                    getPlatoActivity().drawChar(i, b);
-                    getPlatoActivity().refreshView();
-                }
+                mode3(b);
                 setDecoded(true);
                 break;
             case 4:  // Block erase mode
@@ -1180,6 +1163,32 @@ class PLATOProtocol {
                 if (n != 1)
                     mode7(n);
                 break;
+        }
+    }
+
+    /**
+     * Process a mode 3 (text output) data word.
+     *
+     * @param b the byte to process.
+     */
+    private void mode3(byte b) {
+        setCurrentAscState(ascState.NONE);
+        setAscBytes(0);
+        int i = getPlatoActivity().getCurrentCharacterSet();
+        if (i == 0) {
+            b = (byte) asciiM0[b];
+            i = (b & 0x80) >> 7;
+        } else if (i == 1) {
+            b = (byte) asciiM1[b];
+            i = (b & 0x80) >> 7;
+        } else {
+            b = (byte) ((b - 0x20) & 0x3F);
+            // TODO: Come back here and split this out for charsets 2 and 3.
+        }
+        if (b != (byte) 0xff) {
+            b &= 0x7F;
+            getPlatoActivity().drawChar(i, b);
+            getPlatoActivity().refreshView();
         }
     }
 
