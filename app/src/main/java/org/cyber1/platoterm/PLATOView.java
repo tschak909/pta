@@ -412,7 +412,6 @@ public class PLATOView extends View {
             charindex++;
             cx += dx;
         }
-
     }
 
     /**

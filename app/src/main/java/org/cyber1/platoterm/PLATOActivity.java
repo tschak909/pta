@@ -73,6 +73,20 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
     /**
+     * The runner for handling network data.
+     */
+    private final Runnable networkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
+                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
+                    processData(mService.getFromFIFO().popFirst());
+                }
+            }
+            networkHandler.post(networkRunnable);
+        }
+    };
+    /**
      * Current X coordinate
      */
     private int currentX;
@@ -116,21 +130,6 @@ public class PLATOActivity extends AppCompatActivity {
      * The activity's PLATOView
      */
     private PLATOView mContentView;
-    /**
-     * The runner for handling network data.
-     */
-    private final Runnable networkRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
-                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
-                    processData(mService.getFromFIFO().popFirst());
-                    mContentView.invalidate();
-                }
-            }
-            networkHandler.post(networkRunnable);
-        }
-    };
     /**
      * Runnable that hides the task bar after a short delay.
      */
@@ -253,14 +252,13 @@ public class PLATOActivity extends AppCompatActivity {
         // Make view aware of terminal RAM
         setRam(new PLATORam());
         mContentView.setRam(ram);
-
+        getRam().setMode(0x0F); // char mode, rewrite
         mContentView.setDrawingColorFG(0xFFFFFFFF);
         mContentView.setDrawingColorBG(0x00000000);
         mContentView.setModeXOR(false);
-        setBoldWritingMode(false);
-        setDeltaX(0);
-        setDeltaY(0);
-        setFontHeight(8);
+        mContentView.setBoldWritingMode(false);
+        setDeltaX(8);
+        setDeltaY(16);
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
@@ -349,7 +347,8 @@ public class PLATOActivity extends AppCompatActivity {
      */
     public void drawChar(int charsetToUse, int charToPlot) {
         mContentView.drawChar(getCurrentX(), getCurrentY(), charsetToUse, charToPlot, false);
-        setCurrentX(getCurrentX() + 8);
+        setCurrentX(getCurrentX() + getDeltaX());
+        // todo handle vertical.
     }
 
     /**
@@ -390,7 +389,7 @@ public class PLATOActivity extends AppCompatActivity {
             setDeltaY(getDeltaY() * 2);
         } else {
             setDeltaX(8);
-            setDeltaY(8);
+            setDeltaY(16);
         }
     }
 
@@ -444,14 +443,14 @@ public class PLATOActivity extends AppCompatActivity {
      * Move cursor down one space.
      */
     public void linefeed() {
-        setCurrentY(getCurrentY() + getDeltaY());
+        setCurrentY(getCurrentY() - getDeltaY());
     }
 
     /**
      * Move cursor up one space.
      */
     public void verticalTab() {
-        setCurrentY(getCurrentY() - getDeltaY());
+        setCurrentY(getCurrentY() + getDeltaY());
     }
 
     /**
@@ -619,5 +618,12 @@ public class PLATOActivity extends AppCompatActivity {
      */
     public void plotLine(int currentX, int currentY, int x, int y) {
         mContentView.plotLine(currentX, currentY, x, y);
+    }
+
+    /**
+     * Refresh the content view. Called from protocol.
+     */
+    public void refreshView() {
+        mContentView.invalidate();
     }
 }

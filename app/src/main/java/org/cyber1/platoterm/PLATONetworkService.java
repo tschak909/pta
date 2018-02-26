@@ -19,7 +19,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 public class PLATONetworkService extends Service {
-    public static final int BUFFER_SIZE = 5120;
+    public static final int BUFFER_SIZE = 8192;
     public static final int BUFFER_SIZE_XON1 = BUFFER_SIZE / 3;
     public static final int BUFFER_SIZE_XON2 = BUFFER_SIZE / 4;
     public static final int BUFFER_SIZE_XOFF1 = BUFFER_SIZE - BUFFER_SIZE_XON1;
@@ -98,10 +98,6 @@ public class PLATONetworkService extends Service {
         super.onCreate();
         setFromFIFO(new CircularArray<Byte>(BUFFER_SIZE));
         setToFIFO(new CircularArray<Byte>(BUFFER_SIZE));
-        // Somehow, the very first item in the fifo doesn't make it there
-        // So I put nulls in.
-        getFromFIFO().addLast((byte) 0x00);
-        getToFIFO().addLast((byte) 0x00);
         new Thread(serviceThread).start();
         Notification notification = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -118,6 +114,12 @@ public class PLATONetworkService extends Service {
 
     public void connectToPLATO(String host, int ProtocolMode) {
         try {
+            // Somehow, the very first item in the fifo doesn't make it there
+            // So I put nulls in.
+            getFromFIFO().clear();
+            getToFIFO().clear();
+            getFromFIFO().addLast((byte) 0x00);
+            getToFIFO().addLast((byte) 0x00);
             setSocket(new Socket(host, ProtocolMode));
             setIs(getSocket().getInputStream());
             setOs(getSocket().getOutputStream());
@@ -163,6 +165,8 @@ public class PLATONetworkService extends Service {
 
     public void disconnectFromPLATO() {
         setRunning(false);
+        fromFIFO.clear();
+        toFIFO.clear();
         try {
             mSocket.close();
         } catch (IOException e) {
