@@ -409,20 +409,20 @@ class PLATOProtocol {
                 break;
             case ASCII_EM:
                 int mode = ((getPlatoActivity().getRam().getMode() & 3) + (4 << 2));
-                Log.d(this.getClass().getName(), "EM - Load Mode " + mode);
+                Log.d(this.getClass().getName(), "EM - Block write/erase - Load Mode " + mode);
                 getPlatoActivity().getRam().setMode(mode);
                 setModeWords(0);  // Number of words since entring mode
                 setDecoded(true);
                 break;
             case ASCII_FS:
                 mode = ((getPlatoActivity().getRam().getMode() & 3));
-                Log.d(this.getClass().getName(), "FS - Load Mode " + mode);
+                Log.d(this.getClass().getName(), "FS - Point Plot - Load Mode " + mode);
                 getPlatoActivity().getRam().setMode(mode);
                 setDecoded(true);
                 break;
             case ASCII_GS:
                 mode = ((getPlatoActivity().getRam().getMode() & 3) + (1 << 2));
-                Log.d(this.getClass().getName(), "GS - Load Mode " + mode);
+                Log.d(this.getClass().getName(), "GS - Draw Line Load Mode " + mode);
                 setCurrentAscState(ascState.LOAD_COORDINATES);
                 getPlatoActivity().getRam().setMode(mode);
                 setDecoded(true);
@@ -434,7 +434,7 @@ class PLATOProtocol {
                 break;
             case ASCII_US:
                 mode = ((getPlatoActivity().getRam().getMode() & 3) + (3 << 2));
-                Log.d(this.getClass().getName(), "US - Load Mode " + mode);
+                Log.d(this.getClass().getName(), "US - Alpha mode - Load Mode " + mode);
                 getPlatoActivity().getRam().setMode(mode);
                 setDecoded(true);
                 break;
@@ -1116,7 +1116,7 @@ class PLATOProtocol {
 
     /**
      * Process PLATO modes 0-7
-     * @param b
+     * @param b byte to pass to modes 0-7
      */
     private void processModes(byte b) {
         switch (getPlatoActivity().getRam().getMode() >> 2) {
@@ -1152,16 +1152,19 @@ class PLATOProtocol {
                 n = assembleData(b);
                 if (n != 1)
                     mode5(n);
+                setDecoded(true);
                 break;
             case 6:  // User Program mode
                 n = assembleData(b);
                 if (n != 1)
                     mode6(n);
+                setDecoded(true);
                 break;
             case 7:  // User program mode
                 n = assembleData(b);
                 if (n != 1)
                     mode7(n);
+                setDecoded(true);
                 break;
         }
     }
@@ -1174,6 +1177,7 @@ class PLATOProtocol {
     private void mode3(byte b) {
         setCurrentAscState(ascState.NONE);
         setAscBytes(0);
+        Log.d(this.getClass().getName(), "mode 3: Output char: " + String.format("%c", b));
         int i = getPlatoActivity().getCurrentCharacterSet();
         if (i == 0) {
             b = (byte) asciiM0[b];
@@ -1295,7 +1299,7 @@ class PLATOProtocol {
                 break;
             case 2: // Low X
                 int nx = (getLastCoordinateX() & 0x480) | coordinate;
-                assembler = (getLastCoordinateX() << 16) + getLastCoordinateY(); // WHY is this even here?
+                // assembler = (getLastCoordinateX() << 16) + getLastCoordinateY(); // WHY is this even here?
                 setLastCoordinateX(nx);
                 setAscBytes(0);
                 setCurrentAscState(ascState.NONE);

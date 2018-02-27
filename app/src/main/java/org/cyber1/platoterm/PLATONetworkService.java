@@ -120,6 +120,14 @@ public class PLATONetworkService extends Service {
             getToFIFO().clear();
             getFromFIFO().addLast((byte) 0x00);
             getToFIFO().addLast((byte) 0x00);
+
+            // Wait for 5 seconds, before connecting.
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             setSocket(new Socket(host, ProtocolMode));
             setIs(getSocket().getInputStream());
             setOs(getSocket().getOutputStream());
@@ -152,6 +160,14 @@ public class PLATONetworkService extends Service {
                     }
                 }
             } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            // Sleep a bit...
+
+            try {
+                Thread.sleep(2);
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
