@@ -248,9 +248,10 @@ class PLATOProtocol {
         } else if (isEscape()) {
             setEscape(false);
             processEscapeSequence(b);
-        } else if (b < 0x20) {
-            processControlCharacters(b);
+//        } else if (b < 0x20) {
+//            processControlCharacters(b);
         } else {
+            processControlCharacters(b);
             processOtherStates(b);
         }
 
@@ -736,7 +737,7 @@ class PLATOProtocol {
         data[2] = 0x68 | ((key >> 6) & 0x03);
         for (int i = 0; i < 3; i++) {
             Log.d(this.getClass().getName(), "sendEXT sent byte to PLATO." + data[i]);
-            getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+            getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
         }
     }
 
@@ -995,6 +996,7 @@ class PLATOProtocol {
 //            }
 //        }
         n += 0x80;
+        Log.d(this.getClass().getName(), "Sending echo key " + String.format("%02X", n));
         sendProcessedKey(n);
         setPendingEcho(-1);
     }
@@ -1053,7 +1055,7 @@ class PLATOProtocol {
                 Log.d(this.getClass().getName(), "Double key to PLATO " + data[0] + " " + (data[1] & 0xff));
             }
             for (int i = 0; i < len; i++) {
-                getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+                getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
             }
         } else if (isDumbTerminal()) {
             // Ok, the constant referenced here resolves to o01607 (WTF?!)
@@ -1077,14 +1079,14 @@ class PLATOProtocol {
                 Log.d(this.getClass().getName(), "ASCII mode key to PLATO " + (data[0] & 0xFF) + " " + (data[1] & 0xFF) + " " + (data[2] & 0xFF));
             }
             for (int i = 0; i < len; i++) {
-                getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+                getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
             }
         } else {
             data[0] = n >> 7;
             data[1] = 0x80 | n;
             len = 2;
             for (int i = 0; i < len; i++) {
-                getPlatoActivity().getNetworkService().getToFIFO().addLast((byte) data[i]);
+                getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
             }
 
         }

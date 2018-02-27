@@ -68,7 +68,7 @@ public class PLATOActivity extends AppCompatActivity {
     private final Runnable keytestRunnable = new Runnable() {
         @Override
         public void run() {
-            Log.d("PLATOActivity", "Smashing NEXT key.");
+            Log.d("PLATOProtocol", "Smashing NEXT key.");
             protocol.sendProcessedKey(0x16);
         }
     };
@@ -80,7 +80,7 @@ public class PLATOActivity extends AppCompatActivity {
         public void run() {
             if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
                 for (int i = 0; i < mService.getFromFIFO().size(); i++) {
-                    processData(mService.getFromFIFO().popFirst());
+                    processData(mService.getFromFIFO().poll());
                 }
             }
             networkHandler.post(networkRunnable);

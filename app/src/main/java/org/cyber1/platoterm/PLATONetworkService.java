@@ -10,28 +10,28 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.util.CircularArray;
 import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class PLATONetworkService extends Service {
-    public static final int BUFFER_SIZE = 8192;
-    public static final int BUFFER_SIZE_XON1 = BUFFER_SIZE / 3;
-    public static final int BUFFER_SIZE_XON2 = BUFFER_SIZE / 4;
-    public static final int BUFFER_SIZE_XOFF1 = BUFFER_SIZE - BUFFER_SIZE_XON1;
-    public static final int BUFFER_SIZE_XOFF2 = BUFFER_SIZE - BUFFER_SIZE_XON2;
+    //    public static final int BUFFER_SIZE = 8192;
+//    public static final int BUFFER_SIZE_XON1 = BUFFER_SIZE / 3;
+//    public static final int BUFFER_SIZE_XON2 = BUFFER_SIZE / 4;
+//    public static final int BUFFER_SIZE_XOFF1 = BUFFER_SIZE - BUFFER_SIZE_XON1;
+//    public static final int BUFFER_SIZE_XOFF2 = BUFFER_SIZE - BUFFER_SIZE_XON2;
     private static final String DEFAULT_HOST = "cyberserv.org";
     private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
     private InputStream is;
     private OutputStream os;
     private Socket mSocket;
-    private CircularArray<Byte> fromFIFO;   // Data FROM PLATO
-    private CircularArray<Byte> toFIFO;     // Data TO PLATO
+    private ConcurrentLinkedQueue<Byte> fromFIFO;   // Data FROM PLATO
+    private ConcurrentLinkedQueue<Byte> toFIFO;     // Data TO PLATO
     private boolean mRunning = false;
 
     private Runnable serviceThread = new Runnable() {
@@ -69,19 +69,19 @@ public class PLATONetworkService extends Service {
         this.mSocket = mSocket;
     }
 
-    public CircularArray<Byte> getToFIFO() {
+    public ConcurrentLinkedQueue<Byte> getToFIFO() {
         return toFIFO;
     }
 
-    public void setToFIFO(CircularArray<Byte> toFIFO) {
+    public void setToFIFO(ConcurrentLinkedQueue<Byte> toFIFO) {
         this.toFIFO = toFIFO;
     }
 
-    public CircularArray<Byte> getFromFIFO() {
+    public ConcurrentLinkedQueue<Byte> getFromFIFO() {
         return fromFIFO;
     }
 
-    public void setFromFIFO(CircularArray<Byte> fromFIFO) {
+    public void setFromFIFO(ConcurrentLinkedQueue<Byte> fromFIFO) {
         this.fromFIFO = fromFIFO;
     }
 
@@ -96,8 +96,8 @@ public class PLATONetworkService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        setFromFIFO(new CircularArray<Byte>(BUFFER_SIZE));
-        setToFIFO(new CircularArray<Byte>(BUFFER_SIZE));
+        setFromFIFO(new ConcurrentLinkedQueue<Byte>());
+        setToFIFO(new ConcurrentLinkedQueue<Byte>());
         new Thread(serviceThread).start();
         Notification notification = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -118,8 +118,8 @@ public class PLATONetworkService extends Service {
             // So I put nulls in.
             getFromFIFO().clear();
             getToFIFO().clear();
-            getFromFIFO().addLast((byte) 0x00);
-            getToFIFO().addLast((byte) 0x00);
+            getFromFIFO().add((byte) 0x00);
+            getToFIFO().add((byte) 0x00);
 
             // Wait for 5 seconds, before connecting.
             try {
@@ -150,13 +150,13 @@ public class PLATONetworkService extends Service {
                 if (getIs().available() > 0) {
                     byte b = (byte) (is.read() & 0x7F);
                     Log.d(this.getClass().getName(), "Byte in: 0x" + (String.format("%02X", b)));
-                    getFromFIFO().addLast(b);
+                    getFromFIFO().add(b);
                 }
 
                 // Drain the output FIFO
                 if (!getToFIFO().isEmpty()) {
                     for (int i = 0; i < getToFIFO().size(); i++) {
-                        getOs().write(getToFIFO().popLast());
+                        getOs().write(getToFIFO().poll());
                     }
                 }
             } catch (IOException e) {
