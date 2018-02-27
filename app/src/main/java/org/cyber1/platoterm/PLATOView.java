@@ -366,9 +366,12 @@ public class PLATOView extends View {
                 break;
         }
 
-        if (modeXOR || (getRam().getWeMode() == 1))   // Inverse text.
+        if (modeXOR || (getRam().getWeMode() > 0))   // Inverse text.
         {
             // Swap colors if we're asked to do inverse video.
+            fgcolor = getDrawingColorFG();
+            bgcolor = getDrawingColorBG();
+        } else {
             fgcolor = getDrawingColorBG();
             bgcolor = getDrawingColorFG();
         }

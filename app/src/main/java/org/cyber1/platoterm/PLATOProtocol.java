@@ -1249,8 +1249,8 @@ class PLATOProtocol {
     private void mode1(int i) {
         int x, y;
 
-        x = (i >> 9) & 0777;
-        y = i & 0777;
+        x = (i >> 9) & 0x1FF;
+        y = i & 0x1FF;
         Log.d(getClass().getName(), "lineto X:" + x + " Y:" + y);
         getPlatoActivity().plotLine(getPlatoActivity().getCurrentX(), getPlatoActivity().getCurrentY(), x, y);
         getPlatoActivity().setCurrentX(x);
@@ -1285,6 +1285,8 @@ class PLATOProtocol {
 
         switch (b >> 5) // Get control bits 6 and 7
         {
+            case 0:
+                Log.d(this.getClass().getName(), "assembleCoordinate: INVALID STATE !!!");
             case 1: // High X or High Y
                 if (getAscBytes() == 0) {
                     // High Y coordinate
