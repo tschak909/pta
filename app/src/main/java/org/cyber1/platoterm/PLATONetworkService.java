@@ -149,14 +149,24 @@ public class PLATONetworkService extends Service {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
                     byte b = (byte) (is.read() & 0x7F);
-                    Log.d(this.getClass().getName(), "Byte in: 0x" + (String.format("%02X", b)));
+                    if (b > 20) {
+                        Log.d(this.getClass().getName(), "Byte in: " + (String.format("%c", b)));
+                    } else {
+                        Log.d(this.getClass().getName(), "Byte in: 0x" + (String.format("%02X", b)));
+                    }
                     getFromFIFO().add(b);
                 }
 
                 // Drain the output FIFO
                 if (!getToFIFO().isEmpty()) {
                     for (int i = 0; i < getToFIFO().size(); i++) {
-                        getOs().write(getToFIFO().poll());
+                        byte b = getToFIFO().poll();
+                        if (b > 20) {
+                            Log.d(this.getClass().getName(), "Byte out: " + String.format("%c", b));
+                        } else {
+                            Log.d(this.getClass().getName(), "Byte out: 0x" + String.format("%02X", b));
+                        }
+                        getOs().write(b);
                     }
                 }
             } catch (IOException e) {

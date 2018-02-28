@@ -248,10 +248,9 @@ class PLATOProtocol {
         } else if (isEscape()) {
             setEscape(false);
             processEscapeSequence(b);
-//        } else if (b < 0x20) {
-//            processControlCharacters(b);
-        } else {
+        } else if (b < 0x20) {
             processControlCharacters(b);
+        } else {
             processOtherStates(b);
         }
 
@@ -1057,7 +1056,7 @@ class PLATOProtocol {
             for (int i = 0; i < len; i++) {
                 getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
             }
-        } else if (isDumbTerminal()) {
+        } else if (!isDumbTerminal()) {
             // Ok, the constant referenced here resolves to o01607 (WTF?!)
             if (n == (ASCII_XOFF + 0x80)) {
                 if (!getFlowControl()) {
