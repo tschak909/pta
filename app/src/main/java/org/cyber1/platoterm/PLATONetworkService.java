@@ -123,7 +123,7 @@ public class PLATONetworkService extends Service {
 
             // Wait for 5 seconds, before connecting.
             try {
-                Thread.sleep(5000);
+                Thread.sleep(250);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

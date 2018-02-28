@@ -788,11 +788,12 @@ class PLATOProtocol {
             int g = (n >> 8) & 0xff;
             int b = (n) & 0xff;
             int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
+            Log.d(this.getClass().getName(), "color assembled to a: " + (a & 0xFF) + "r: " + (r & 0xFF) + " g: " + (g & 0xFF) + " b: " + (b & 0xFF));
             if (getCurrentAscState() == ascState.FG) {
-                Log.d(getClass().getName(), "Setting foreground to: " + c);
+                Log.d(getClass().getName(), "color Setting foreground to: " + String.format("%d", (c)));
                 getPlatoActivity().setCurrentFG(c);
             } else {
-                Log.d(getClass().getName(), "Setting background to: " + c);
+                Log.d(getClass().getName(), "color Setting background to: " + String.format("%d", (c)));
                 getPlatoActivity().setCurrentBG(c);
             }
         }
@@ -1302,7 +1303,7 @@ class PLATOProtocol {
                 break;
             case 2: // Low X
                 int nx = (getLastCoordinateX() & 0x480) | coordinate;
-                // assembler = (getLastCoordinateX() << 16) + getLastCoordinateY(); // WHY is this even here?
+                assembler = (getLastCoordinateX() << 16) + getLastCoordinateY(); // WHY is this even here?
                 setLastCoordinateX(nx);
                 setAscBytes(0);
                 setCurrentAscState(ascState.NONE);
