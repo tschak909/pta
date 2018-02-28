@@ -333,6 +333,7 @@ class PLATOProtocol {
                         getPlatoActivity().activateTouchPanel((n & 0x20) != 0);
                     }
                     processSSF(n);
+                    setDecoded(true);
                     break;
                 case FG:
                 case BG:
@@ -1302,7 +1303,7 @@ class PLATOProtocol {
                 }
                 break;
             case 2: // Low X
-                int nx = (getLastCoordinateX() & 0x480) | coordinate;
+                int nx = (getLastCoordinateX() & 0x1E0) | coordinate;
                 assembler = (getLastCoordinateX() << 16) + getLastCoordinateY(); // WHY is this even here?
                 setLastCoordinateX(nx);
                 setAscBytes(0);
@@ -1311,7 +1312,7 @@ class PLATOProtocol {
                 return true;
             case 3: // Low Y
                 Log.d(this.getClass().getName(), "assembleCoordinate: Low Y coordinate: " + coordinate);
-                int ny = (getLastCoordinateX() & 0x480) | coordinate;
+                int ny = (getLastCoordinateX() & 0x1E0) | coordinate;
                 setLastCoordinateY(ny);
                 setAscBytes(2);
                 break;
