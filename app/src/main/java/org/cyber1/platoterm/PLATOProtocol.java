@@ -365,7 +365,7 @@ class PLATOProtocol {
         switch (b) {
             case ASCII_NUL:
                 try {
-                    Thread.sleep(100); // 1/10th of a second.
+                    Thread.sleep(8); // 8ms in ASCII.
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
