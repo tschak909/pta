@@ -161,6 +161,7 @@ class PLATOProtocol {
     private String PMD;
     private int fontWidth;
     private int fontHeight;
+    private int mode4start;
 
     /**
      * Constructor for PLATO protocol.
@@ -317,7 +318,7 @@ class PLATOProtocol {
                 case LOAD_ADDRESS:
                     n = assembleData(b);
                     if (n != -1) {
-                        Log.d(this.getClass().getName(), "Load memory address " + n);
+                        Log.d(this.getClass().getName(), "Load memory address 0x" + String.format("%04X", n));
                         getRAM().setMAR(n & 0x7FFF);
                     }
                     setDecoded(true);
@@ -882,17 +883,23 @@ class PLATOProtocol {
      * @return -1 if word not complete, yet, otherwise, the word.
      */
     private int assembleData(byte b) {
+        int bits = 0;
+        int shiftamt = 0;
         if (getAscBytes() == 0) {
             assembler = 0;
         }
-        assembler |= ((b & 0x3F) << (getAscBytes() * 6));
+        bits = (b & 0x3F);
+        shiftamt = getAscBytes() * 6;
+        bits = bits << (getAscBytes() * 6);
+        assembler |= bits;
+        // assembler |= ((b & 0x3F) << (getAscBytes() * 6));
         if (++ascBytes == 3) {
-            Log.d(this.getClass().getName(), "assembledata complete:" + getAscBytes() + " value:" + (b & 0x3F) + " :: " + getAssembler());
+            Log.d(this.getClass().getName(), "assembledata complete:" + getAscBytes() + " value: 0x" + String.format("%02X", (b & 0x3F)) + " :: 0x" + String.format("%02X", getAssembler()));
             setAscBytes(0);
             setCurrentAscState(ascState.NONE);
             return getAssembler();
         } else {
-            Log.d(this.getClass().getName(), "assembledata proceeding: byte offset:" + getAscBytes() + " value:" + (b & 0x3F));
+            Log.d(this.getClass().getName(), "assembledata proceeding: byte offset:" + getAscBytes() + " value: 0x" + String.format("%02X", (b & 0x3F)));
         }
         return -1;
     }
@@ -1185,10 +1192,25 @@ class PLATOProtocol {
     /**
      * Process mode 4 (block erase) data word.
      *
-     * @param i Data word
+     * @param n Data word
      */
-    private void mode4(int i) {
+    private void mode4(int n) {
+        if ((getModeWords() & 1) > 0) {
+            Log.d(this.getClass().getName(), "mode4 block erase, first word.");
+            setMode4start(n);
+            return;
+        }
 
+        int x1 = (getMode4start() >> 9) & 0x1FF;
+        int y1 = getMode4start() & 0x1FF;
+        int x2 = (n >> 9) & 0x1FF;
+        int y2 = n & 0x1FF;
+
+        Log.d(this.getClass().getName(), "mode4 block erase X1: " + x1 + " Y1: " + x1 + " X2: " + x2 + " Y2: " + y2);
+        // todo: add ignore delay.
+        getPlatoActivity().eraseBlock(x1, y1, x2, y2);
+        getPlatoActivity().setCurrentX(x1);
+        getPlatoActivity().setCurrentY(y1 - 15);
     }
 
     /**
@@ -1510,6 +1532,14 @@ class PLATOProtocol {
 
     public PLATOFont getPlatoFont() {
         return platoFont;
+    }
+
+    public int getMode4start() {
+        return mode4start;
+    }
+
+    public void setMode4start(int mode4start) {
+        this.mode4start = mode4start;
     }
 
     private enum ascState {SSF, LOAD_EXTERNAL, LOAD_ADDRESS, PMD, LOAD_ECHO, FG, BG, PAINT, GSFG, NONE, PNI_RS, LOAD_COORDINATES}

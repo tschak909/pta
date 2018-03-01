@@ -642,4 +642,16 @@ public class PLATOActivity extends AppCompatActivity {
     public void setFont(PLATOFont font) {
         this.platoFont = font;
     }
+
+    /**
+     * Erase a block of the screen
+     *
+     * @param x1 Beginning X coordinate (0-511)
+     * @param y1 Beginning Y coordinate (0-511)
+     * @param x2 Ending X coordinate (0-511)
+     * @param y2 Ending Y coordinate (0-511)
+     */
+    public void eraseBlock(int x1, int y1, int x2, int y2) {
+        mContentView.erase(x1, y1, x2, y2);
+    }
 }
