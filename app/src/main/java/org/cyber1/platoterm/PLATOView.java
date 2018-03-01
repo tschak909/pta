@@ -147,18 +147,18 @@ public class PLATOView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // int paddingLeft = getPaddingLeft();
-        // int paddingTop = getPaddingTop();
-        // int paddingRight = getPaddingRight();
-        // int paddingBottom = getPaddingBottom();
+        int paddingLeft = getPaddingLeft();
+        int paddingTop = getPaddingTop();
+        int paddingRight = getPaddingRight();
+        int paddingBottom = getPaddingBottom();
 
-        // int contentWidth = getWidth() - paddingLeft - paddingRight;
-        // int contentHeight = getHeight() - paddingTop - paddingBottom;
+        int contentWidth = getWidth() - paddingLeft - paddingRight;
+        int contentHeight = getHeight() - paddingTop - paddingBottom;
 
-        mRenderRect.top = 0;
-        mRenderRect.left = (getWidth() / 2) - (getHeight() / 2);
-        mRenderRect.bottom = getHeight();
-        mRenderRect.right = mRenderRect.left + getHeight();
+        mRenderRect.top = paddingTop;
+        mRenderRect.left = (contentWidth / 2) - (contentHeight / 2) + paddingLeft;
+        mRenderRect.bottom = contentHeight - paddingBottom;
+        mRenderRect.right = mRenderRect.left + contentHeight - paddingRight;
 
         canvas.drawBitmap(mBitmap, null, mRenderRect, null);
 
