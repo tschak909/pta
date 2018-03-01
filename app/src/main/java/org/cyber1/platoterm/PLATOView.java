@@ -220,7 +220,7 @@ public class PLATOView extends View {
         dy <<= 1;
 
         // Draw first point
-        setPoint(x1, y1, getDrawingColorFG(), false);
+        setPoint(x1, y1, drawingColorFG, false);
 
         // Check for shallow line
         if (dx > dy) {
@@ -232,7 +232,7 @@ public class PLATOView extends View {
                 }
                 x1 += sx;
                 fraction += dy;
-                setPoint(x1, y1, getDrawingColorFG(), false);
+                setPoint(x1, y1, drawingColorFG, false);
 
             }
         }
@@ -246,7 +246,7 @@ public class PLATOView extends View {
                 }
                 y1 += sy;
                 fraction += dx;
-                setPoint(x1, y1, getDrawingColorFG(), false);
+                setPoint(x1, y1, drawingColorFG, false);
             }
         }
     }
@@ -285,10 +285,10 @@ public class PLATOView extends View {
 
         if (isModeXOR() || (getRam().getWeMode() & 1) == 1) {
             // mode rewrite or write
-            currentColor = getDrawingColorFG();
+            currentColor = drawingColorFG;
         } else {
             // mode inverse or erase
-            currentColor = getDrawingColorBG();
+            currentColor = drawingColorBG;
         }
 
         for (y = y1; y <= y2; y++) {
@@ -360,11 +360,11 @@ public class PLATOView extends View {
         if (modeXOR || (getRam().getWeMode() > 0))   // Inverse text.
         {
             // Swap colors if we're asked to do inverse video.
-            fgcolor = getDrawingColorFG();
-            bgcolor = getDrawingColorBG();
+            fgcolor = drawingColorFG;
+            bgcolor = drawingColorBG;
         } else {
-            fgcolor = getDrawingColorBG();
-            bgcolor = getDrawingColorFG();
+            fgcolor = drawingColorBG;
+            bgcolor = drawingColorFG;
         }
 
         // Select the current character

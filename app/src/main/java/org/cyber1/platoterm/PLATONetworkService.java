@@ -175,11 +175,11 @@ public class PLATONetworkService extends Service {
 
             // Sleep a bit...
 
-            try {
-                Thread.sleep(2);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Thread.sleep(2);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
 
         }
     }

@@ -765,8 +765,6 @@ class PLATOProtocol {
         }
         assembler = (b & 0x3F) << 2;
         if (++ascBytes == 1) {
-            setAscBytes(0);
-            setCurrentAscState(ascState.NONE);
             Log.d(this.getClass().getName(), "Grayscale color: " + assembler);
             return getAssembler();
         } else {
@@ -796,6 +794,10 @@ class PLATOProtocol {
                 getPlatoActivity().setCurrentBG(String.format("#%08X", c));
             }
         }
+        if (ascBytes == 4) {
+            ascBytes = 0;
+            currentAscState = ascState.NONE;
+        }
     }
 
     /**
@@ -808,14 +810,12 @@ class PLATOProtocol {
         if (ascBytes == 0) {
             assembler = 0;
         }
-        assembler |= ((b & 0x3F) << (getAscBytes() * 6));
+        assembler |= ((b & 077) << (ascBytes * 6));
         if (++ascBytes == 4) {
-            ascBytes = 0;
-            setCurrentAscState(ascState.NONE);
             Log.d(this.getClass().getName(), "Assembled colorbyte #" + String.format("%08X", assembler));
             return assembler;
         } else {
-            Log.d(this.getClass().getName(), "Assembling colorbyte, next byte: " + ascBytes + " " + String.format("%02X", (b & 0x3F)));
+            Log.d(this.getClass().getName(), "Assembling colorbyte, ascByte: " + ascBytes + "next byte: " + ascBytes + " " + String.format("%02X", (b & 0x3F)));
         }
         return -1;
     }
@@ -1081,13 +1081,13 @@ class PLATOProtocol {
         switch (getRAM().getMode() >> 2) {
             case 0:  // Dot mode
                 if (assembleCoordinate(b)) {
-                    mode0((getLastCoordinateX() << 9) + getLastCoordinateY());
+                    mode0((lastCoordinateX << 9) + lastCoordinateY);
                     decoded = true;
                 }
                 break;
             case 1:  // Line mode
                 if (assembleCoordinate(b)) {
-                    mode1((getLastCoordinateX() << 9) + getLastCoordinateY());
+                    mode1((lastCoordinateX << 9) + lastCoordinateY);
                     decoded = true;
                 }
                 break;
@@ -1103,7 +1103,7 @@ class PLATOProtocol {
                 break;
             case 4:  // Block erase mode
                 if (assembleCoordinate(b)) {
-                    mode4((getLastCoordinateX() << 9));
+                    mode4((lastCoordinateX << 9));
                 }
                 decoded = true;
                 break;
@@ -1134,6 +1134,7 @@ class PLATOProtocol {
      * @param b the byte to process.
      */
     private void mode3(byte b) {
+        Log.d(this.getClass().getName(), "out char: " + String.format("%c", b));
         currentAscState = ascState.NONE;
         ascBytes = 0;
         int i = getPlatoActivity().getCurrentCharacterSet();
@@ -1275,16 +1276,16 @@ class PLATOProtocol {
      * @return true if coordinate is complete, false if coordinate needs another byte.
      */
     private boolean assembleCoordinate(byte b) {
-        int coordinate = b & 0x1F; // Mask off top three bits
+        int coordinate = b & 037; // Mask off top three bits
 
         switch (b >> 5) // Get control bits 6 and 7
         {
             case 1: // High X or High Y
-                if (getAscBytes() == 0) {
+                if (ascBytes == 0) {
                     // High Y coordinate
                     Log.d(this.getClass().getName(), "assembleCoordinate: High Y coordinate " + coordinate);
-                    lastCoordinateY = (lastCoordinateY & 0x1F) | (coordinate << 5);
-                    setAscBytes(2);
+                    lastCoordinateY = (lastCoordinateY & 037) | (coordinate << 5);
+                    ascBytes = 0;
                 } else {
                     // High X coordinate
                     Log.d(this.getClass().getName(), "assembleCoordinate: High X coordinate " + coordinate);
