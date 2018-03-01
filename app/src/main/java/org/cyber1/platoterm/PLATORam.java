@@ -12,6 +12,8 @@ package org.cyber1.platoterm;
 class PLATORam {
 
     private static final int MODE = 0x22F6;
+    private static final int WORK_RAM = 0x2000;
+    public static final int C2ORIGIN = WORK_RAM + 0x0306;
     private int[] ram;
     private int MAR = 0;
 
@@ -42,4 +44,35 @@ class PLATORam {
     public void setMAR(int newMAR) {
         this.MAR = newMAR;
     }
+
+    /**
+     * Write a word to the following addr and addr+1
+     *
+     * @param addr The address in RAM to write
+     * @param n    the byte to write.
+     */
+    public void writeRAM(int addr, byte n) {
+        ram[addr] = (n & 0xFF);
+    }
+
+    /**
+     * Read byte from terminal RAM
+     *
+     * @param addr Address in PPT address space to read.
+     * @return byte at that address.
+     */
+    public byte readRAM(int addr) {
+        return (byte) (ram[addr] & 0xFF);
+    }
+
+    /**
+     * Read word from terminal RAM
+     *
+     * @param addr Address in PPT address space to read.
+     * @return the word at address and adddress + 1
+     */
+    public short readRAMW(int addr) {
+        return (byte) ((ram[addr] & 0xFF) + (ram[addr + 1] << 8) & 0xFF);
+    }
+
 }

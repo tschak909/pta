@@ -45,8 +45,8 @@ public class PLATOView extends View {
     private boolean verticalWritingMode;
     private PLATORam ram;
     private boolean modeXOR;
-    private PLATOFont mFonts;
     private boolean touchPanel;
+    private PLATOFont font;
 
 
     public PLATOView(Context context) {
@@ -112,14 +112,6 @@ public class PLATOView extends View {
         this.drawingColorBG = drawingColorBG;
     }
 
-    public PLATOFont getFonts() {
-        return mFonts;
-    }
-
-    public void setFonts(PLATOFont Font) {
-        this.mFonts = Font;
-    }
-
     public int getDrawingColorFG() {
         return drawingColorFG;
     }
@@ -149,7 +141,6 @@ public class PLATOView extends View {
         Log.d("PLATOActivity", "PLATOView init called with defstyle " + defStyle);
 
         mRenderRect = new RectF();
-        setFonts(new PLATOFont());
     }
 
     @Override
@@ -353,16 +344,16 @@ public class PLATOView extends View {
 
         switch (charset) {
             case 0:
-                setCurrentFont(getFonts().getPlato_m0());
+                setCurrentFont(getFont().getPlato_m0());
                 break;
             case 1:
-                setCurrentFont(getFonts().getPlato_m1());
+                setCurrentFont(getFont().getPlato_m1());
                 break;
             case 2:
-                setCurrentFont(getFonts().getPlato_m2());
+                setCurrentFont(getFont().getPlato_m2());
                 break;
             case 3:
-                setCurrentFont(getFonts().getPlato_m3());
+                setCurrentFont(getFont().getPlato_m3());
                 break;
         }
 
@@ -484,11 +475,11 @@ public class PLATOView extends View {
                 pat+=32;
                 if (pat<128)
                 {
-                    d=getFonts().getPlato_m0()[pat];
+                    d=getFont().getPlato_m0()[pat];
                 }
                 else
                 {
-                    d=getFonts().getPlato_m1()[pat];
+                    d=getFont().getPlato_m1()[pat];
                 }
             }
             else
@@ -509,19 +500,19 @@ public class PLATOView extends View {
             // Form the offset to the character pattern
             if (i==0)
             {
-                currentChar=getFonts().getPlato_m0()[8*d];
+                currentChar=getFont().getPlato_m0()[8*d];
             }
             else if (i==1)
             {
-                currentChar=getFonts().getPlato_m1()[8*d];
+                currentChar=getFont().getPlato_m1()[8*d];
             }
             else if (i==2)
             {
-                currentChar=getFonts().getPlato_m2()[8*d];
+                currentChar=getFont().getPlato_m2()[8*d];
             }
             else if (i==3)
             {
-                currentChar=getFonts().getPlato_m3()[8*d];
+                currentChar=getFont().getPlato_m3()[8*d];
             }
         }
         sp = -1;
@@ -544,15 +535,10 @@ public class PLATOView extends View {
      * A view test case.
      */
     public void testPattern() {
+        setDrawingColorFG(0xFFFFFFFF);
+        setDrawingColorBG(0x00000000);
         erase();
-        erase(BOTTOM_LEFT_X, BOTTOM_LEFT_Y, TOP_RIGHT_X, TOP_RIGHT_Y);
-        setBoldWritingMode(TEST_BOLD_ON);
-        setVerticalWritingMode(TEST_VERTICAL_ON);
-        setModeXOR(TEST_XOR_ON);
-        setDrawingColorFG(COLOR_WHITE);
-        setDrawingColorBG(COLOR_BLACK);
-        plotLine(TOP_RIGHT_X, TOP_RIGHT_Y, BOTTOM_LEFT_X, BOTTOM_LEFT_Y);
-        drawChar(MIDDLE_X, MIDDLE_Y, CHARSET_0, CHAR_A, AUTOBS_TEST);
+        setPoint(1, 1, 0xFFFFFFFF, false);
     }
 
     public boolean isTouchPanel() {
@@ -561,6 +547,14 @@ public class PLATOView extends View {
 
     public void setTouchPanel(boolean touchPanel) {
         this.touchPanel = touchPanel;
+    }
+
+    public PLATOFont getFont() {
+        return font;
+    }
+
+    public void setFont(PLATOFont font) {
+        this.font = font;
     }
 }
 

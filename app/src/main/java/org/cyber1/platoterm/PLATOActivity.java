@@ -73,19 +73,9 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
     /**
-     * The runner for handling network data.
+     * Current PLATO Font instance
      */
-    private final Runnable networkRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
-                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
-                    processData(mService.getFromFIFO().poll());
-                }
-            }
-            networkHandler.post(networkRunnable);
-        }
-    };
+    private PLATOFont platoFont;
     /**
      * Current X coordinate
      */
@@ -159,6 +149,20 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
     private PLATORam ram;
+    /**
+     * The runner for handling network data.
+     */
+    private final Runnable networkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
+                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
+                    processData(mService.getFromFIFO().poll());
+                }
+            }
+            networkHandler.post(networkRunnable);
+        }
+    };
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -213,7 +217,7 @@ public class PLATOActivity extends AppCompatActivity {
 
     private void processData(Byte aByte) {
         if (protocol == null) {
-            protocol = new PLATOProtocol(this);
+            protocol = new PLATOProtocol(this, this.ram, this.platoFont);
         } else {
             protocol.decodeByte(aByte);
         }
@@ -223,8 +227,10 @@ public class PLATOActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         Log.i("PLATOActivity", "ONSTART!!!");
-        Intent intent = new Intent(this, PLATONetworkService.class);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        if (!VIEW_TEST) {
+            Intent intent = new Intent(this, PLATONetworkService.class);
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
     @Override
@@ -251,7 +257,9 @@ public class PLATOActivity extends AppCompatActivity {
 
         // Make view aware of terminal RAM
         setRam(new PLATORam());
+        setFont(new PLATOFont());
         mContentView.setRam(ram);
+        mContentView.setFont(getPlatoFont());
         getRam().setMode(0x0F); // char mode, rewrite
         mContentView.setDrawingColorFG(0xFFFFFFFF);
         mContentView.setDrawingColorBG(0x00000000);
@@ -279,10 +287,10 @@ public class PLATOActivity extends AppCompatActivity {
         //
         if (VIEW_TEST) {
             mContentView.testPattern();
+        } else {
+            networkHandler.post(networkRunnable);
+            keytestHandler.postDelayed(keytestRunnable, 6000);
         }
-
-        networkHandler.post(networkRunnable);
-        keytestHandler.postDelayed(keytestRunnable, 6000);
 
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
@@ -625,5 +633,13 @@ public class PLATOActivity extends AppCompatActivity {
      */
     public void refreshView() {
         mContentView.invalidate();
+    }
+
+    public PLATOFont getPlatoFont() {
+        return platoFont;
+    }
+
+    public void setFont(PLATOFont font) {
+        this.platoFont = font;
     }
 }
