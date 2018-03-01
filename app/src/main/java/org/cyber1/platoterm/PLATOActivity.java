@@ -9,6 +9,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -594,16 +595,16 @@ public class PLATOActivity extends AppCompatActivity {
         return mContentView.getDrawingColorFG();
     }
 
-    public void setCurrentFG(int currentFG) {
-        mContentView.setDrawingColorFG(currentFG);
+    public void setCurrentFG(String newFG) {
+        mContentView.setDrawingColorFG(Color.parseColor(newFG));
     }
 
     public int getCurrentBG() {
         return mContentView.getDrawingColorBG();
     }
 
-    public void setCurrentBG(int currentBG) {
-        this.mContentView.setDrawingColorBG(currentBG);
+    public void setCurrentBG(String newBG) {
+        this.mContentView.setDrawingColorBG(Color.parseColor(newBG));
     }
 
     /**

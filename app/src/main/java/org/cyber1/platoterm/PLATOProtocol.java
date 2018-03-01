@@ -249,10 +249,9 @@ class PLATOProtocol {
         } else if (isEscape()) {
             escape = false;
             processEscapeSequence(b);
-        } else if (b < 0x20) {
-            processControlCharacters(b);
         } else {
             processOtherStates(b);
+            processControlCharacters(b);
         }
 
 
@@ -749,7 +748,7 @@ class PLATOProtocol {
             int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
             if (getCurrentAscState() == ascState.GSFG) {
                 Log.d(this.getClass().getName(), "set grayscale foreground color: " + c);
-                getPlatoActivity().setCurrentFG(c);
+                getPlatoActivity().setCurrentFG(String.format("#%08X", c));
             }
         }
     }
@@ -790,11 +789,11 @@ class PLATOProtocol {
             int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
             Log.d(this.getClass().getName(), "color assembled to a: " + (a & 0xFF) + "r: " + (r & 0xFF) + " g: " + (g & 0xFF) + " b: " + (b & 0xFF));
             if (currentAscState == ascState.FG) {
-                Log.d(getClass().getName(), "color Setting foreground to: " + String.format("%d", (c)));
-                getPlatoActivity().setCurrentFG(c);
+                Log.d(getClass().getName(), "color Setting foreground to: " + String.format("#%08X", (c)));
+                getPlatoActivity().setCurrentFG(String.format("#%08X", c));
             } else {
-                Log.d(getClass().getName(), "color Setting background to: " + String.format("%d", (c)));
-                getPlatoActivity().setCurrentBG(c);
+                Log.d(getClass().getName(), "color Setting background to: " + String.format("#%08X", (c)));
+                getPlatoActivity().setCurrentBG(String.format("#%08X", c));
             }
         }
     }
