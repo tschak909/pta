@@ -24,7 +24,7 @@ public class PLATONetworkService extends Service {
 //    public static final int BUFFER_SIZE_XON2 = BUFFER_SIZE / 4;
 //    public static final int BUFFER_SIZE_XOFF1 = BUFFER_SIZE - BUFFER_SIZE_XON1;
 //    public static final int BUFFER_SIZE_XOFF2 = BUFFER_SIZE - BUFFER_SIZE_XON2;
-    private static final String DEFAULT_HOST = "192.168.1.11";
+    private static final String DEFAULT_HOST = "cyberserv.org";
     private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
     private InputStream is;
