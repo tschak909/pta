@@ -250,30 +250,30 @@ class PLATOProtocol {
             escape = false;
             processEscapeSequence(b);
         } else {
-            processOtherStates(b);
             processControlCharacters(b);
+            processOtherStates(b);
         }
 
 
     }
 
     private void processPMD(byte b) {
-        int n = AssembleASCIIPLATOMetadata(b);
-        if (n == 0) {
-            if (getFontPMD()) {
-                Log.d(this.getClass().getName(), "PLATO metadata font data...");
-                setFontPMD(false);
-            } else if (getFontInfo()) {
-                Log.d(this.getClass().getName(), "PLATO metadata font data info...");
-                setFontInfo(false);
-            } else if (getosInfo()) {
-                Log.d(this.getClass().getName(), "PLATO metadata get operating system info...");
-                setOsInfo(false);
-            } else {
-                Log.d(this.getClass().getName(), "PLATO metadata complete...");
-                processPLATOMetaData();
-            }
-        }
+//        int n = AssembleASCIIPLATOMetadata(b);
+//        if (n == 0) {
+//            if (getFontPMD()) {
+//                Log.d(this.getClass().getName(), "PLATO metadata font data...");
+//                setFontPMD(false);
+//            } else if (getFontInfo()) {
+//                Log.d(this.getClass().getName(), "PLATO metadata font data info...");
+//                setFontInfo(false);
+//            } else if (getosInfo()) {
+//                Log.d(this.getClass().getName(), "PLATO metadata get operating system info...");
+//                setOsInfo(false);
+//            } else {
+//                Log.d(this.getClass().getName(), "PLATO metadata complete...");
+//                processPLATOMetaData();
+//            }
+//        }
         decoded = true;
     }
 
@@ -780,18 +780,17 @@ class PLATOProtocol {
      */
     private void processColor(int n) {
         if (n != -1) {
-            int a = 0xff;
             int r = (n >> 16) & 0xff;
             int g = (n >> 8) & 0xff;
             int b = (n) & 0xff;
-            int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
-            Log.d(this.getClass().getName(), "color assembled to a: " + (a & 0xFF) + "r: " + (r & 0xFF) + " g: " + (g & 0xFF) + " b: " + (b & 0xFF));
+            int c = (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
+            Log.d(this.getClass().getName(), "color assembled to r: " + (r & 0xFF) + " g: " + (g & 0xFF) + " b: " + (b & 0xFF));
             if (currentAscState == ascState.FG) {
-                Log.d(getClass().getName(), "color Setting foreground to: " + String.format("#%08X", (c)));
-                getPlatoActivity().setCurrentFG(String.format("#%08X", c));
+                Log.d(getClass().getName(), "color Setting foreground to: " + String.format("#%06X", (c)));
+                getPlatoActivity().setCurrentFG(String.format("#%06X", c));
             } else {
-                Log.d(getClass().getName(), "color Setting background to: " + String.format("#%08X", (c)));
-                getPlatoActivity().setCurrentBG(String.format("#%08X", c));
+                Log.d(getClass().getName(), "color Setting background to: " + String.format("#%06X", (c)));
+                getPlatoActivity().setCurrentBG(String.format("#%06X", c));
             }
         }
         if (ascBytes == 4) {
@@ -812,7 +811,7 @@ class PLATOProtocol {
         }
         assembler |= ((b & 077) << (ascBytes * 6));
         if (++ascBytes == 4) {
-            Log.d(this.getClass().getName(), "Assembled colorbyte #" + String.format("%08X", assembler));
+            Log.d(this.getClass().getName(), "Assembled colorbyte #" + String.format("%06X", assembler));
             return assembler;
         } else {
             Log.d(this.getClass().getName(), "Assembling colorbyte, ascByte: " + ascBytes + "next byte: " + ascBytes + " " + String.format("%02X", (b & 0x3F)));
@@ -1293,7 +1292,7 @@ class PLATOProtocol {
                 }
                 break;
             case 2: // Low X
-                assembler = (lastCoordinateX << 16) + lastCoordinateY; // WHY is this even here?
+                lastCoordinateX = (lastCoordinateX & 0740) | coordinate;
                 ascBytes = 0;
                 currentAscState = ascState.NONE;
                 Log.d(this.getClass().getName(), "assembleCoordinate: Low X coordinate: " + coordinate + " - lastx: " + lastCoordinateX + " - lasty: " + lastCoordinateY);
