@@ -290,6 +290,7 @@ class PLATOProtocol {
         if (b >= ASCII_SPACE) {
             switch (getCurrentAscState()) {
                 case LOAD_COORDINATES:
+                    Log.d(this.getClass().getName(), "LOAD_COORDINATES pre assemblecoordinate");
                     if (assembleCoordinate(b)) {
                         getPlatoActivity().setCurrentX(lastCoordinateX);
                         getPlatoActivity().setCurrentY(lastCoordinateY);
@@ -423,7 +424,8 @@ class PLATOProtocol {
             case ASCII_GS:
                 mode = ((getRAM().getMode() & 3) + (1 << 2));
                 Log.d(this.getClass().getName(), "GS - Draw Line Load Mode " + mode);
-                setCurrentAscState(ascState.LOAD_COORDINATES);
+                currentAscState = ascState.LOAD_COORDINATES;
+                ascBytes = 0;
                 getRAM().setMode(mode);
                 decoded = true;
                 break;
@@ -1079,12 +1081,14 @@ class PLATOProtocol {
     private void processModes(byte b) {
         switch (getRAM().getMode() >> 2) {
             case 0:  // Dot mode
+                Log.d(this.getClass().getName(), "mode0 pre assemblecoordinate");
                 if (assembleCoordinate(b)) {
                     mode0((lastCoordinateX << 9) + lastCoordinateY);
                     decoded = true;
                 }
                 break;
             case 1:  // Line mode
+                Log.d(this.getClass().getName(), "mode1 pre assemblecoordinate");
                 if (assembleCoordinate(b)) {
                     mode1((lastCoordinateX << 9) + lastCoordinateY);
                     decoded = true;
@@ -1101,6 +1105,7 @@ class PLATOProtocol {
                 decoded = true;
                 break;
             case 4:  // Block erase mode
+                Log.d(this.getClass().getName(), "mode4 pre assemblecoordinate");
                 if (assembleCoordinate(b)) {
                     mode4((lastCoordinateX << 9));
                 }
@@ -1276,7 +1281,7 @@ class PLATOProtocol {
      */
     private boolean assembleCoordinate(byte b) {
         int coordinate = b & 037; // Mask off top three bits
-
+        Log.d(this.getClass().getName(), "assembleCoordinate: byte: 0x" + String.format("%02X", b) + " coordinate: 0x" + String.format("%02X", coordinate));
         switch (b >> 5) // Get control bits 6 and 7
         {
             case 1: // High X or High Y
@@ -1338,7 +1343,7 @@ class PLATOProtocol {
                 decoded = true;
             }
         } else if (b == ASCII_CR) {
-            getPlatoActivity().setCurrentX(0); // Beginning of line.
+            getPlatoActivity().setCurrentX(getPlatoActivity().getMargin()); // Beginning of line.
             decoded = true;
         } else if (b == ASCII_LF) {
             if (getPlatoActivity().getCurrentY() != 0)

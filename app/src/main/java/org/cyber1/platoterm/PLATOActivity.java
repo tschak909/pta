@@ -475,6 +475,7 @@ public class PLATOActivity extends AppCompatActivity {
      */
     public void carriageReturn() {
         setCurrentX(SCREEN_LEFT + getMargin());
+        setCurrentY(getCurrentY() - getDeltaY() & 0777);
     }
 
     /**
