@@ -10,16 +10,20 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
+import android.inputmethodservice.Keyboard;
+import android.inputmethodservice.KeyboardView;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 
 /**
@@ -73,6 +77,10 @@ public class PLATOActivity extends AppCompatActivity {
             protocol.sendProcessedKey(0x16);
         }
     };
+
+    private KeyboardView mKeyboardView;
+    private Keyboard mKeyboard;
+
     /**
      * Current PLATO Font instance
      */
@@ -179,6 +187,47 @@ public class PLATOActivity extends AppCompatActivity {
     };
     private int fontSize;
     private int fontFlags;
+    private FloatingActionButton mShowKeyboardButton;
+    public KeyboardView.OnKeyboardActionListener keyboardActionListener = new KeyboardView.OnKeyboardActionListener() {
+        @Override
+        public void onPress(int primaryCode) {
+        }
+
+        @Override
+        public void onRelease(int primaryCode) {
+        }
+
+        @Override
+        public void onKey(int primaryCode, int[] keyCodes) {
+            long eventTime = System.currentTimeMillis();
+            KeyEvent event = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, primaryCode, 0, 0, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE);
+            dispatchKeyEvent(event);
+            if (primaryCode == -3) {
+                hideKeyboard();
+            }
+        }
+
+        @Override
+        public void onText(CharSequence text) {
+        }
+
+        @Override
+        public void swipeLeft() {
+        }
+
+        @Override
+        public void swipeRight() {
+        }
+
+        @Override
+        public void swipeDown() {
+            hideKeyboard();
+        }
+
+        @Override
+        public void swipeUp() {
+        }
+    };
 
     public PLATONetworkService getNetworkService() {
         return mService;
@@ -251,6 +300,26 @@ public class PLATOActivity extends AppCompatActivity {
 
         mVisible = true;
         mContentView = (PLATOView) findViewById(R.id.fullscreen_content);
+        mKeyboardView = (KeyboardView) findViewById(R.id.keyboard_view);
+        mKeyboard = new Keyboard(getApplicationContext(), R.xml.keyboard);
+        mKeyboardView.setKeyboard(mKeyboard);
+        mKeyboardView.setPreviewEnabled(false);
+        mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
+        mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
+        mShowKeyboardButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showKeyboard();
+            }
+        });
+
+        mKeyboardView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus)
+                    mShowKeyboardButton.setVisibility(View.VISIBLE);
+            }
+        });
 
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -269,13 +338,13 @@ public class PLATOActivity extends AppCompatActivity {
         setDeltaX(8);
         setDeltaY(16);
 
-        // Set up the user interaction to manually show or hide the system UI.
-        mContentView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                toggle();
-            }
-        });
+//        // Set up the user interaction to manually show or hide the system UI.
+//        mContentView.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                toggle();
+//            }
+//        });
 
     }
 
@@ -322,14 +391,14 @@ public class PLATOActivity extends AppCompatActivity {
 
     @SuppressLint("InlinedApi")
     private void show() {
-        // Show the system bar
-        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-        mVisible = true;
-
-        // Schedule a runnable to display UI elements after a delay
-        mHideHandler.removeCallbacks(mHidePart2Runnable);
-        mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
+//        // Show the system bar
+//        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+//                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+//        mVisible = true;
+//
+//        // Schedule a runnable to display UI elements after a delay
+//        mHideHandler.removeCallbacks(mHidePart2Runnable);
+//        mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
     }
 
     /**
@@ -655,5 +724,15 @@ public class PLATOActivity extends AppCompatActivity {
      */
     public void eraseBlock(int x1, int y1, int x2, int y2) {
         mContentView.erase(x1, y1, x2, y2);
+    }
+
+    private void showKeyboard() {
+        mKeyboardView.setVisibility(View.VISIBLE);
+        mShowKeyboardButton.setVisibility(View.GONE);
+    }
+
+    private void hideKeyboard() {
+        mKeyboardView.setVisibility(View.GONE);
+        mShowKeyboardButton.setVisibility(View.VISIBLE);
     }
 }

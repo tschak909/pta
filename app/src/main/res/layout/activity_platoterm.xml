@@ -2,7 +2,7 @@
   ~ Copyright (c) 2018. Cyber1.org
   -->
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,7 +13,35 @@
         android:id="@+id/fullscreen_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:keepScreenOn="true" />
+        android:layout_above="@+id/keyboard_view"
+        android:gravity="top|center_horizontal"
+        android:keepScreenOn="true"
+        android:src="@android:drawable/ic_menu_view" />
 
-</FrameLayout>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/show_keyboard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"
+        android:alpha="0.333"
+        android:src="@drawable/keyboard" />
+
+    <android.inputmethodservice.KeyboardView
+        android:id="@+id/keyboard_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:background="@color/colorPrimary"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:keyBackground="@color/colorPrimary"
+        android:keyTextColor="#fff"
+        android:paddingTop="0dp"
+        android:soundEffectsEnabled="true"
+        android:visibility="gone" />
+</RelativeLayout>
