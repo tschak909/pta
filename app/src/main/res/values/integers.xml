@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2018. Cyber1.org
+  -->
+
+<resources>
+    <integer name="keyboard_shifted">1</integer>
+    <integer name="keyboard_normal">0</integer>
+</resources>

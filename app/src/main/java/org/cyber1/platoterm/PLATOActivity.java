@@ -80,7 +80,11 @@ public class PLATOActivity extends AppCompatActivity {
 
     private KeyboardView mKeyboardView;
     private Keyboard mKeyboard;
-
+    private Keyboard mKeyboardShifted;
+    /**
+     * The current keyboard state, see above.
+     */
+    private currentKeyboard currentKeyboardState;
     /**
      * Current PLATO Font instance
      */
@@ -205,6 +209,24 @@ public class PLATOActivity extends AppCompatActivity {
             if (primaryCode == -3) {
                 hideKeyboard();
             }
+            if (primaryCode == -5) {
+                switch (currentKeyboardState) {
+                    case ALPHA:
+                        mKeyboardView.setVisibility(View.GONE);
+                        mKeyboardView.setKeyboard(mKeyboardShifted);
+                        mKeyboardView.setShifted(true);
+                        mKeyboardView.setVisibility(View.VISIBLE);
+                        currentKeyboardState = currentKeyboard.ALPHA_SHIFTED;
+                        break;
+                    case ALPHA_SHIFTED:
+                        mKeyboardView.setVisibility(View.VISIBLE);
+                        mKeyboardView.setKeyboard(mKeyboard);
+                        mKeyboardView.invalidateAllKeys();
+                        mKeyboardView.setShifted(false);
+                        currentKeyboardState = currentKeyboard.ALPHA;
+                        break;
+                }
+            }
         }
 
         @Override
@@ -301,8 +323,11 @@ public class PLATOActivity extends AppCompatActivity {
         mVisible = true;
         mContentView = (PLATOView) findViewById(R.id.fullscreen_content);
         mKeyboardView = (KeyboardView) findViewById(R.id.keyboard_view);
-        mKeyboard = new Keyboard(getApplicationContext(), R.xml.keyboard);
+        mKeyboard = new Keyboard(getApplicationContext(), R.xml.keyboard, R.integer.keyboard_normal);
+        mKeyboardShifted = new Keyboard(getApplicationContext(), R.xml.keyboard, R.integer.keyboard_shifted);
+
         mKeyboardView.setKeyboard(mKeyboard);
+        currentKeyboardState = currentKeyboard.ALPHA;
         mKeyboardView.setPreviewEnabled(false);
         mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
@@ -310,14 +335,6 @@ public class PLATOActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showKeyboard();
-            }
-        });
-
-        mKeyboardView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus)
-                    mShowKeyboardButton.setVisibility(View.VISIBLE);
             }
         });
 
@@ -335,6 +352,7 @@ public class PLATOActivity extends AppCompatActivity {
         mContentView.setDrawingColorBG(0x00000000);
         mContentView.setModeXOR(false);
         mContentView.setBoldWritingMode(false);
+
         setDeltaX(8);
         setDeltaY(16);
 
@@ -734,5 +752,21 @@ public class PLATOActivity extends AppCompatActivity {
     private void hideKeyboard() {
         mKeyboardView.setVisibility(View.GONE);
         mShowKeyboardButton.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d(this.getClass().getName(), "KEYDOWN! 0x" + String.format("%02X", keyCode));
+        return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * The current keyboard active:
+     * ALPHA: alphanumweric keyboard
+     * ALPHA_SHIFTED alphanumeric keyboard + SHIFT
+     * PLATOKEYS Show the PLATO keys
+     */
+    private enum currentKeyboard {
+        ALPHA, ALPHA_SHIFTED, PLATOKEYS
     }
 }

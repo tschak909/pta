@@ -31,16 +31,13 @@
 
     <android.inputmethodservice.KeyboardView
         android:id="@+id/keyboard_view"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:background="@color/colorPrimary"
         android:focusable="true"
         android:focusableInTouchMode="true"
-        android:keyBackground="@color/colorPrimary"
-        android:keyTextColor="#fff"
         android:paddingTop="0dp"
         android:soundEffectsEnabled="true"
         android:visibility="gone" />
