@@ -229,7 +229,11 @@
             android:keyLabel="STOP"
             android:keyWidth="20%p" />
         <Key
-            android:codes="10"
+            android:codes="139"
+            android:keyLabel="DATA"
+            android:keyWidth="20%p" />
+        <Key
+            android:codes="66"
             android:keyEdgeFlags="right"
             android:keyLabel="NEXT"
             android:keyWidth="20%p" />

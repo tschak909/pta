@@ -258,22 +258,22 @@ class PLATOProtocol {
     }
 
     private void processPMD(byte b) {
-//        int n = AssembleASCIIPLATOMetadata(b);
-//        if (n == 0) {
-//            if (getFontPMD()) {
-//                Log.d(this.getClass().getName(), "PLATO metadata font data...");
-//                setFontPMD(false);
-//            } else if (getFontInfo()) {
-//                Log.d(this.getClass().getName(), "PLATO metadata font data info...");
-//                setFontInfo(false);
-//            } else if (getosInfo()) {
-//                Log.d(this.getClass().getName(), "PLATO metadata get operating system info...");
-//                setOsInfo(false);
-//            } else {
-//                Log.d(this.getClass().getName(), "PLATO metadata complete...");
-//                processPLATOMetaData();
-//            }
-//        }
+        int n = AssembleASCIIPLATOMetadata(b);
+        if (n == 0) {
+            if (getFontPMD()) {
+                Log.d(this.getClass().getName(), "PLATO metadata font data...");
+                setFontPMD(false);
+            } else if (getFontInfo()) {
+                Log.d(this.getClass().getName(), "PLATO metadata font data info...");
+                setFontInfo(false);
+            } else if (getosInfo()) {
+                Log.d(this.getClass().getName(), "PLATO metadata get operating system info...");
+                setOsInfo(false);
+            } else {
+                Log.d(this.getClass().getName(), "PLATO metadata complete...");
+                processPLATOMetaData();
+            }
+        }
         decoded = true;
     }
 
@@ -927,7 +927,8 @@ class PLATOProtocol {
             case 0x52:
                 // Enable flow control.
                 Log.d(this.getClass().getName(), "load Enable Flow Control");
-                setFlowControl(true);
+                setFlowControl(false);
+                n = 0x52;
                 break;
             case 0x60:
                 // Enquire features
@@ -972,6 +973,9 @@ class PLATOProtocol {
             // Connection isn't there anymore, just return.
             return;
         }
+
+        Log.d(this.getClass().getName(), "Processed key before conversion: 0x" + String.format("%02X", n));
+
         if (n < 0x80) {
             // Regular key code.
             n = asciiKeycodes[n];
@@ -1151,6 +1155,8 @@ class PLATOProtocol {
         } else {
             b = (byte) ((b - 0x20) & 0x3F);
             // TODO: Come back here and split this out for charsets 2 and 3.
+            if (i == 2) {
+            }
         }
         if (b != (byte) 0xff) {
             b &= 0x7F;
@@ -1230,8 +1236,10 @@ class PLATOProtocol {
                 // Load data
                 Log.d(this.getClass().getName(), "mode 2 - character memdata " + String.format("%04X", n & 0xffff) + " to charword: " + String.format("%04X", chaddr));
                 if (chaddr < 512) {
+                    Log.d(this.getClass().getName(), "Loading into Character set memory 2 address: " + String.format("%04X", chaddr) + " value: " + String.format("%04X", chaddr));
                     getPlatoFont().getPlato_m2()[chaddr] = n & 0xFFFF;
                 } else {
+                    Log.d(this.getClass().getName(), "Loading into Character set memory 3 address: " + String.format("%04X", chaddr) + " value: " + String.format("%04X", chaddr));
                     getPlatoFont().getPlato_m3()[chaddr] = n & 0xFFFF;
                     ++chaddr;
                 }

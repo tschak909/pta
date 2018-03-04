@@ -153,6 +153,10 @@ public class PLATOActivity extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         }
     };
+    /**
+     * Is the keyboard currently shifted?
+     */
+    private boolean keyboardIsShifted = false;
     private int[] termAreaBitmap;
     private boolean mVisible;
     private final Runnable mHideRunnable = new Runnable() {
@@ -205,6 +209,7 @@ public class PLATOActivity extends AppCompatActivity {
         public void onKey(int primaryCode, int[] keyCodes) {
             long eventTime = System.currentTimeMillis();
             KeyEvent event = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, primaryCode, 0, 0, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE);
+
             dispatchKeyEvent(event);
             if (primaryCode == -3) {
                 hideKeyboard();
@@ -217,6 +222,7 @@ public class PLATOActivity extends AppCompatActivity {
                         mKeyboardView.setShifted(true);
                         mKeyboardView.setVisibility(View.VISIBLE);
                         currentKeyboardState = currentKeyboard.ALPHA_SHIFTED;
+                        keyboardIsShifted = true;
                         break;
                     case ALPHA_SHIFTED:
                         mKeyboardView.setVisibility(View.VISIBLE);
@@ -224,6 +230,7 @@ public class PLATOActivity extends AppCompatActivity {
                         mKeyboardView.invalidateAllKeys();
                         mKeyboardView.setShifted(false);
                         currentKeyboardState = currentKeyboard.ALPHA;
+                        keyboardIsShifted = false;
                         break;
                 }
             }
@@ -331,6 +338,12 @@ public class PLATOActivity extends AppCompatActivity {
         mKeyboardView.setPreviewEnabled(false);
         mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
+
+//        if (getResources().getConfiguration().keyboard == 2)
+//        {
+//            mShowKeyboardButton.setVisibility(View.GONE);
+//        }
+
         mShowKeyboardButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -756,7 +769,20 @@ public class PLATOActivity extends AppCompatActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Log.d(this.getClass().getName(), "KEYDOWN! 0x" + String.format("%02X", keyCode));
+
+        Log.d(this.getClass().getName(), "Keydown - 0x" + String.format("%02X", keyCode));
+        // Process SHIFT keys, they're the same for PLATO.
+
+        if ((keyCode == 59) || (keyCode == 60)) {
+            Log.d(this.getClass().getName(), "Keyboard shift toggle: " + keyboardIsShifted);
+            keyboardIsShifted = !keyboardIsShifted;
+        }
+        if (event.isShiftPressed() || keyboardIsShifted) {
+            protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
+        } else {
+            protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
+        }
+
         return super.onKeyDown(keyCode, event);
     }
 
