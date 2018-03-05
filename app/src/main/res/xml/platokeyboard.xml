@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2018. Cyber1.org
+  -->
+
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+    android:horizontalGap="0px"
+    android:keyHeight="8%p"
+    android:keyWidth="15%p"
+    android:verticalGap="0px">
+
+    <Row>
+
+        <Key
+            android:codes="-10"
+            android:keyLabel="ANS" />
+        <Key
+            android:codes="-11"
+            android:keyLabel="BACK" />
+        <Key
+            android:codes="-12"
+            android:keyLabel="COPY" />
+        <Key
+            android:codes="-13"
+            android:keyLabel="DATA" />
+        <Key
+            android:codes="-14"
+            android:keyLabel="EDIT" />
+        <Key
+            android:codes="-15"
+            android:keyLabel="FONT" />
+        <Key
+            android:codes="-16"
+            android:keyEdgeFlags="right"
+            android:keyLabel="HELP" />
+    </Row>
+    <Row>
+        <Key
+            android:codes="-32"
+            android:keyEdgeFlags="left"
+            android:keyIcon="@drawable/keyboard_close" />
+        <Key
+            android:codes="-17"
+            android:keyLabel="LAB" />
+        <Key
+            android:codes="-18"
+            android:keyLabel="MICRO" />
+        <Key
+            android:codes="-20"
+            android:keyLabel="\u25A1" />
+        <Key
+            android:codes="-22"
+            android:keyLabel="TERM" />
+        <Key
+            android:codes="-23"
+            android:keyLabel="SUPER" />
+        <Key
+            android:codes="-24"
+            android:keyEdgeFlags="right"
+            android:keyLabel="SUB" />
+    </Row>
+
+</Keyboard>

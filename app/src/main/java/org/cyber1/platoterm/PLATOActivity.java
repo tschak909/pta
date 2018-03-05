@@ -211,6 +211,7 @@ public class PLATOActivity extends AppCompatActivity {
             KeyEvent event = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, primaryCode, 0, 0, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE);
 
             dispatchKeyEvent(event);
+
             if (primaryCode == -3) {
                 hideKeyboard();
             }
@@ -335,7 +336,7 @@ public class PLATOActivity extends AppCompatActivity {
 
         mKeyboardView.setKeyboard(mKeyboard);
         currentKeyboardState = currentKeyboard.ALPHA;
-        mKeyboardView.setPreviewEnabled(false);
+        mKeyboardView.setPreviewEnabled(true);
         mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
 
@@ -777,13 +778,97 @@ public class PLATOActivity extends AppCompatActivity {
             Log.d(this.getClass().getName(), "Keyboard shift toggle: " + keyboardIsShifted);
             keyboardIsShifted = !keyboardIsShifted;
         }
-        if (event.isShiftPressed() || keyboardIsShifted) {
+
+        if (keyCode < 0)
+            translateSoftkeyDown(keyCode);
+
+        if (event.isCtrlPressed() && event.isShiftPressed()) {
+            protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForCTRLKeycode(keyCode));
+        } else if (event.isCtrlPressed()) {
+            protocol.sendProcessedKey(PLATOKey.getPLATOcodeForCTRLKeycode(keyCode));
+        } else if (event.isShiftPressed() || keyboardIsShifted) {
             protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
         } else {
             protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
         }
 
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * Translate special PLATO softkey presses so they can be interpreted by normal
+     * events.
+     *
+     * @param keyCode the intercepted keycode, less than 0.
+     */
+    private void translateSoftkeyDown(int keyCode) {
+        switch (keyCode) {
+            case -10:   // ANS
+                protocol.sendProcessedKey(0x12);
+            case -11:   // BACK
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x38);
+                else
+                    protocol.sendProcessedKey(0x18);
+                break;
+            case -12:   // COPY
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x1B);
+                else
+                    protocol.sendProcessedKey(0x3B);
+                break;
+            case -13:   // DATA
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x39);
+                else
+                    protocol.sendProcessedKey(0x19);
+                break;
+            case -14:   // EDIT
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x37);
+                else
+                    protocol.sendProcessedKey(0x17);
+                break;
+
+            case -15:   // FONT
+                protocol.sendProcessedKey(0x34);
+                break;
+            case -16:   // HELP
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x35);
+                else
+                    protocol.sendProcessedKey(0x15);
+                break;
+            case -17:   // LAB
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x39);
+                else
+                    protocol.sendProcessedKey(0x19);
+                break;
+            case -18:   // MICRO
+                protocol.sendProcessedKey(0x14);
+                break;
+            case -20:   // SQUARE
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x3C);
+                else
+                    protocol.sendProcessedKey(0x1C);
+            case -22:   // TERM
+                protocol.sendProcessedKey(0x32);
+                break;
+            case -23:   // SUPER
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x30);
+                else
+                    protocol.sendProcessedKey(0x10);
+                break;
+            case -24:   // SUB
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x31);
+                else
+                    protocol.sendProcessedKey(0x11);
+                break;
+        }
     }
 
     /**

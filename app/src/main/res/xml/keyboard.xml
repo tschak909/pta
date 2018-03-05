@@ -218,7 +218,8 @@
             android:keyIcon="@drawable/ic_keyboard_capslock_black_24dp" />
         <Key
             android:codes="-4"
-            android:keyIcon="@drawable/keyboard_variant" />
+            android:keyIcon="@drawable/keyboard_variant"
+            android:popupKeyboard="@xml/platokeyboard" />
         <Key
             android:codes="32"
             android:isRepeatable="true"
@@ -227,10 +228,6 @@
         <Key
             android:codes="140"
             android:keyLabel="STOP"
-            android:keyWidth="20%p" />
-        <Key
-            android:codes="139"
-            android:keyLabel="DATA"
             android:keyWidth="20%p" />
         <Key
             android:codes="66"
