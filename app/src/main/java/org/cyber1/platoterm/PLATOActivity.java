@@ -340,10 +340,9 @@ public class PLATOActivity extends AppCompatActivity {
         mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
 
-//        if (getResources().getConfiguration().keyboard == 2)
-//        {
-//            mShowKeyboardButton.setVisibility(View.GONE);
-//        }
+        if (getResources().getConfiguration().keyboard == 2) {
+            mShowKeyboardButton.setVisibility(View.GONE);
+        }
 
         mShowKeyboardButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -774,24 +773,31 @@ public class PLATOActivity extends AppCompatActivity {
         Log.d(this.getClass().getName(), "Keydown - 0x" + String.format("%02X", keyCode));
         // Process SHIFT keys, they're the same for PLATO.
 
-        if ((keyCode == 59) || (keyCode == 60)) {
-            Log.d(this.getClass().getName(), "Keyboard shift toggle: " + keyboardIsShifted);
-            keyboardIsShifted = !keyboardIsShifted;
-        }
-
-        if (keyCode < 0)
-            translateSoftkeyDown(keyCode);
-
-        if (event.isCtrlPressed() && event.isShiftPressed()) {
-            protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForCTRLKeycode(keyCode));
-        } else if (event.isCtrlPressed()) {
-            protocol.sendProcessedKey(PLATOKey.getPLATOcodeForCTRLKeycode(keyCode));
-        } else if (event.isShiftPressed() || keyboardIsShifted) {
-            protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
+        if (getResources().getConfiguration().keyboard == 2) {
+            // Physical keyboard
+            if (event.isCtrlPressed() && event.isShiftPressed()) {
+                protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForCTRLKeycode(keyCode));
+            } else if (event.isCtrlPressed()) {
+                protocol.sendProcessedKey(PLATOKey.getPLATOcodeForCTRLKeycode(keyCode));
+            } else if (event.isShiftPressed()) {
+                protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
+            } else {
+                protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
+            }
         } else {
-            protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
-        }
+            if ((keyCode == 59) || (keyCode == 60)) {
+                Log.d(this.getClass().getName(), "Keyboard shift toggle: " + keyboardIsShifted);
+                keyboardIsShifted = !keyboardIsShifted;
+            }
+            if (keyCode < 0)
+                translateSoftkeyDown(keyCode);
 
+            if (keyboardIsShifted) {
+                protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
+            } else {
+                protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
+            }
+        }
         return super.onKeyDown(keyCode, event);
     }
 

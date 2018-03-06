@@ -143,24 +143,36 @@ public class PLATONetworkService extends Service {
      * Process data to and from socket, until we are told to disconnect.
      */
     private void doIO() {
+        byte b;
+        byte lastb = 0;
         setRunning(true);
         while (isRunning()) {
             try {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
-                    byte b = (byte) (is.read() & 0x7F);
+                    b = (byte) (is.read());
                     if (b > 20) {
                         Log.d(this.getClass().getName(), "Byte in: " + (String.format("%c", b)));
                     } else {
                         Log.d(this.getClass().getName(), "Byte in: 0x" + (String.format("%02X", b)));
                     }
-                    getFromFIFO().add(b);
+                    if (b == -0x01) // Check for TELNET IAC
+                    {
+                        if (b == lastb) {
+                            Log.d(getClass().getName(), "Escaped TELNET byte, throw away.");
+                        } else {
+                            getFromFIFO().add((byte) (b & 0x7F));
+                        }
+                    } else {
+                        getFromFIFO().add((byte) (b & 0x7F));
+                    }
+                    lastb = b;  // No, Please don't even ask. Bytes are signed.
                 }
 
                 // Drain the output FIFO
                 if (!getToFIFO().isEmpty()) {
                     for (int i = 0; i < getToFIFO().size(); i++) {
-                        byte b = getToFIFO().poll();
+                        b = getToFIFO().poll();
                         if (b > 20) {
                             Log.d(this.getClass().getName(), "Byte out: " + String.format("%c", b));
                         } else {

@@ -162,6 +162,7 @@ class PLATOProtocol {
     private int fontWidth;
     private int fontHeight;
     private int mode4start;
+    private byte lastByte = 0;
 
     /**
      * Constructor for PLATO protocol.
@@ -253,8 +254,6 @@ class PLATOProtocol {
             processControlCharacters(b);
             processOtherStates(b);
         }
-
-
     }
 
     private void processPMD(byte b) {
