@@ -361,8 +361,8 @@ public class PLATOActivity extends AppCompatActivity {
         mContentView.setRam(ram);
         mContentView.setFont(getPlatoFont());
         getRam().setMode(0x0F); // char mode, rewrite
-        mContentView.setDrawingColorFG(0xFFFFFFFF);
-        mContentView.setDrawingColorBG(0x00000000);
+        setCurrentBG("#000000");
+        setCurrentFG("#FFFFFF");
         mContentView.setModeXOR(false);
         mContentView.setBoldWritingMode(false);
 

@@ -165,6 +165,22 @@ public class PLATOView extends View {
     }
 
     /**
+     * Draw point using current drawing mode
+     *
+     * @param x X coordinate (0-511)
+     * @param y Y coordinate (0-511)
+     */
+    public void drawPoint(int x, int y) {
+        if (isModeXOR() || (getRam().getWeMode() & 1) == 1) {
+            // Mode rewrite/write
+            setPoint(x, y, getDrawingColorFG(), isModeXOR());
+        } else {
+            // Mode inverse or erase
+            setPoint(x, y, getDrawingColorBG(), isModeXOR());
+        }
+    }
+
+    /**
      * Plot point into PLATO bitmap.
      *
      * @param x     X coordinate (0-511)
@@ -220,7 +236,7 @@ public class PLATOView extends View {
         dy <<= 1;
 
         // Draw first point
-        setPoint(x1, y1, drawingColorFG, false);
+        drawPoint(x1, y1);
 
         // Check for shallow line
         if (dx > dy) {
@@ -232,7 +248,7 @@ public class PLATOView extends View {
                 }
                 x1 += sx;
                 fraction += dy;
-                setPoint(x1, y1, drawingColorFG, false);
+                drawPoint(x1, y1);
 
             }
         }
@@ -246,7 +262,7 @@ public class PLATOView extends View {
                 }
                 y1 += sy;
                 fraction += dx;
-                setPoint(x1, y1, drawingColorFG, false);
+                drawPoint(x1, y1);
             }
         }
     }
@@ -321,6 +337,7 @@ public class PLATOView extends View {
 
         // Drawing indexes
         int i, j, saveY, dx, dy, sdy;
+        boolean blankout=false;
 
         // Current Char being drawn.
         int currentChar;
@@ -357,18 +374,24 @@ public class PLATOView extends View {
                 break;
         }
 
-        if (modeXOR || (getRam().getWeMode() > 0))   // Inverse text.
+        if (modeXOR || ((getRam().getWeMode() & 1) == 1))   // write or rewrite
         {
-            // Swap colors if we're asked to do inverse video.
             fgcolor = drawingColorFG;
             bgcolor = drawingColorBG;
         } else {
+            // Swap colors if we're asked to do inverse video or erase.
             fgcolor = drawingColorBG;
             bgcolor = drawingColorFG;
+
+            if ((getRam().getMode() & 2) == 0)
+                blankout=true;
         }
 
-        // Select the current character
-        charindex = charnum * 8;
+        if (blankout) {
+            charindex = 0x2D * 8; // Space
+        } else {
+            charindex = charnum * 8;
+        }
 
         // Set current x and y positions to origin.
 
@@ -384,7 +407,7 @@ public class PLATOView extends View {
                     // Blank pixel, background do we erase?
                     if ((getRam().getMode() & 2) == 0) {
                         // Yes, blit the background color.
-                        setPoint(x, y, bgcolor, isModeXOR());
+                        setPoint(x, y, bgcolor, false);
                         if (isBoldWritingMode()) {
                             setPoint(x + 1, y, bgcolor, false);
                             setPoint(x, y + sdy, bgcolor, false);
