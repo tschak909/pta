@@ -493,6 +493,7 @@ public class PLATOActivity extends AppCompatActivity {
 
     public void setBoldWritingMode(boolean boldWritingMode) {
         this.boldWritingMode = boldWritingMode;
+        mContentView.setBoldWritingMode(boldWritingMode);
         if (boldWritingMode) {
             setDeltaX(getDeltaX() * 2);
             setDeltaY(getDeltaY() * 2);
