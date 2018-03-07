@@ -19,14 +19,12 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class PLATONetworkService extends Service {
-    //    public static final int BUFFER_SIZE = 8192;
-//    public static final int BUFFER_SIZE_XON1 = BUFFER_SIZE / 3;
-//    public static final int BUFFER_SIZE_XON2 = BUFFER_SIZE / 4;
-//    public static final int BUFFER_SIZE_XOFF1 = BUFFER_SIZE - BUFFER_SIZE_XON1;
-//    public static final int BUFFER_SIZE_XOFF2 = BUFFER_SIZE - BUFFER_SIZE_XON2;
+    public static final int BUFFER_SIZE = 3000;
+    public static final int BUFFER_SIZE_ON = BUFFER_SIZE / 8;
     private static final String DEFAULT_HOST = "cyberserv.org";
     private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
+    private boolean flowStopped = false;
     private InputStream is;
     private OutputStream os;
     private Socket mSocket;
@@ -151,48 +149,36 @@ public class PLATONetworkService extends Service {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
                     b = (byte) (is.read());
-                    if (b > 20) {
-                        Log.d(this.getClass().getName(), "Byte in: " + (String.format("%c", b)));
-                    } else {
-                        Log.d(this.getClass().getName(), "Byte in: 0x" + (String.format("%02X", b)));
-                    }
-                    if (b == -0x01) // Check for TELNET IAC
+                    if (b == -0x01 && lastb == -0x01) {
+                        Log.d(this.getClass().getName(), "Dropping extra 0xff.");
+                    } else
                     {
-                        if (b == lastb) {
-                            Log.d(getClass().getName(), "Escaped TELNET byte, throw away.");
-                        } else {
-                            getFromFIFO().add((byte) (b & 0x7F));
-                        }
-                    } else {
                         getFromFIFO().add((byte) (b & 0x7F));
                     }
-                    lastb = b;  // No, Please don't even ask. Bytes are signed.
+                    lastb = b;
+                }
+
+                // Deal with Flow Control
+                if (!flowStopped && (getFromFIFO().size() > BUFFER_SIZE)) {
+                    Log.d(this.getClass().getName(), "Flow Control OFF");
+                    getToFIFO().add((byte) 0x13);
+                    flowStopped = true;
+                } else if (flowStopped && (getFromFIFO().size() < BUFFER_SIZE_ON)) {
+                    Log.d(this.getClass().getName(), "Flow Control ON");
+                    getToFIFO().add((byte) 0x11);
+                    flowStopped = false;
                 }
 
                 // Drain the output FIFO
                 if (!getToFIFO().isEmpty()) {
                     for (int i = 0; i < getToFIFO().size(); i++) {
                         b = getToFIFO().poll();
-                        if (b > 20) {
-                            Log.d(this.getClass().getName(), "Byte out: " + String.format("%c", b));
-                        } else {
-                            Log.d(this.getClass().getName(), "Byte out: 0x" + String.format("%02X", b));
-                        }
                         getOs().write(b);
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            // Sleep a bit...
-
-//            try {
-//                Thread.sleep(2);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-
         }
     }
 

@@ -926,8 +926,8 @@ class PLATOProtocol {
             case 0x52:
                 // Enable flow control.
                 Log.d(this.getClass().getName(), "load Enable Flow Control");
-                setFlowControl(false);
-                n = 0x52;
+                setFlowControl(true);
+                n = 0x53;
                 break;
             case 0x60:
                 // Enquire features

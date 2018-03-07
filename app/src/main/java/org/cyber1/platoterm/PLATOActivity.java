@@ -340,9 +340,9 @@ public class PLATOActivity extends AppCompatActivity {
         mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
 
-        if (getResources().getConfiguration().keyboard == 2) {
+/*        if (getResources().getConfiguration().keyboard == 2) {
             mShowKeyboardButton.setVisibility(View.GONE);
-        }
+        }*/
 
         mShowKeyboardButton.setOnClickListener(new View.OnClickListener() {
             @Override
