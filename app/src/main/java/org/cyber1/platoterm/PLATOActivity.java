@@ -196,6 +196,7 @@ public class PLATOActivity extends AppCompatActivity {
     private int fontSize;
     private int fontFlags;
     private FloatingActionButton mShowKeyboardButton;
+    private Keyboard mKeyboardSym;
     public KeyboardView.OnKeyboardActionListener keyboardActionListener = new KeyboardView.OnKeyboardActionListener() {
         @Override
         public void onPress(int primaryCode) {
@@ -214,6 +215,19 @@ public class PLATOActivity extends AppCompatActivity {
 
             if (primaryCode == -3) {
                 hideKeyboard();
+            }
+            if (primaryCode == -6) {
+                switch (currentKeyboardState) {
+                    case ALPHA:
+                        mKeyboardView.setKeyboard(mKeyboardSym);
+                        currentKeyboardState = currentKeyboard.SYMBOLS;
+                        break;
+                    case SYMBOLS:
+                        mKeyboardView.setKeyboard(mKeyboard);
+                        currentKeyboardState = currentKeyboard.ALPHA;
+                        break;
+                }
+
             }
             if (primaryCode == -5) {
                 switch (currentKeyboardState) {
@@ -333,7 +347,6 @@ public class PLATOActivity extends AppCompatActivity {
         mKeyboardView = (KeyboardView) findViewById(R.id.keyboard_view);
         mKeyboard = new Keyboard(getApplicationContext(), R.xml.keyboard, R.integer.keyboard_normal);
         mKeyboardShifted = new Keyboard(getApplicationContext(), R.xml.keyboard, R.integer.keyboard_shifted);
-
         mKeyboardView.setKeyboard(mKeyboard);
         currentKeyboardState = currentKeyboard.ALPHA;
         mKeyboardView.setPreviewEnabled(true);
@@ -848,9 +861,9 @@ public class PLATOActivity extends AppCompatActivity {
                 break;
             case -17:   // LAB
                 if (keyboardIsShifted)
-                    protocol.sendProcessedKey(0x39);
+                    protocol.sendProcessedKey(0x3D);
                 else
-                    protocol.sendProcessedKey(0x19);
+                    protocol.sendProcessedKey(0x1D);
                 break;
             case -18:   // MICRO
                 protocol.sendProcessedKey(0x14);
@@ -875,6 +888,12 @@ public class PLATOActivity extends AppCompatActivity {
                 else
                     protocol.sendProcessedKey(0x11);
                 break;
+            case -25:   // STOP
+                if (keyboardIsShifted)
+                    protocol.sendProcessedKey(0x3A);
+                else
+                    protocol.sendProcessedKey(0x1A);
+                break;
         }
     }
 
@@ -885,6 +904,6 @@ public class PLATOActivity extends AppCompatActivity {
      * PLATOKEYS Show the PLATO keys
      */
     private enum currentKeyboard {
-        ALPHA, ALPHA_SHIFTED, PLATOKEYS
+        ALPHA, ALPHA_SHIFTED, SYMBOLS
     }
 }

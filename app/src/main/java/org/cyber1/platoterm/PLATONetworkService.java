@@ -149,13 +149,14 @@ public class PLATONetworkService extends Service {
                 // Fill up the input FIFO
                 if (getIs().available() > 0) {
                     b = (byte) (is.read());
-                    if (b == -0x01 && lastb == -0x01) {
+                    if (b == (byte) -0x01 && lastb == (byte) -0x01) {
                         Log.d(this.getClass().getName(), "Dropping extra 0xff.");
+                        lastb = 0x00;
                     } else
                     {
                         getFromFIFO().add((byte) (b & 0x7F));
+                        lastb = b;
                     }
-                    lastb = b;
                 }
 
                 // Deal with Flow Control

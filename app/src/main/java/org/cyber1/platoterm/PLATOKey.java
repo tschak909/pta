@@ -129,7 +129,7 @@ class PLATOKey {
             0xFF,   // AKEYCODE_BUTTON_START
             0xFF,   // AKEYCODE_BUTTON_SELECT
             0xFF,   // AKEYCODE_BUTTON_MODE
-            0xFF,   // AKEYCODE_ESCAPE
+            0x0D,   // AKEYCODE_ESCAPE
             0x13,   // AKEYCODE_FORWARD_DEL
             0xFF,   // AKEYCODE_CTRL_LEFT
             0xFF,   // AKEYCODE_CTRL_RIGHT
