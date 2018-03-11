@@ -158,8 +158,6 @@
     <Row>
         <Key
             android:codes="-5"
-            android:isModifier="true"
-            android:isSticky="true"
             android:keyEdgeFlags="left"
             android:keyIcon="@drawable/ic_keyboard_capslock_black_24dp"
             android:keyWidth="15%p" />
@@ -202,15 +200,10 @@
             android:keyLabel="SYM"
             android:keyWidth="15%p" />
         <Key
-            android:codes="-25"
-            android:keyLabel="STOP"
-            android:keyWidth="15%p"
-            android:popupKeyboard="@xml/platokeyboard" />
-        <Key
-            android:codes="32"
+            android:codes="62"
             android:isRepeatable="true"
             android:keyLabel="space"
-            android:keyWidth="35%p" />
+            android:keyWidth="50%p" />
         <Key
             android:codes="66"
             android:keyEdgeFlags="right"

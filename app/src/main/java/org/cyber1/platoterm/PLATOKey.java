@@ -14,6 +14,49 @@ import org.jetbrains.annotations.Contract;
 
 class PLATOKey {
 
+    static final int SOFTKEY_LT = -30;
+    static final int SOFTKEY_GT = -31;
+    static final int SOFTKEY_LEFT_BRACKET = -32;
+    static final int SOFTKEY_RIGHT_BRACKET = -33;
+    static final int SOFTKEY_DOLLAR = -34;
+    static final int SOFTKEY_PERCENT = -35;
+    static final int SOFTKEY_UNDERLINE = -36;
+    static final int SOFTKEY_APOSTROPHE = -37;
+    static final int SOFTKEY_ASTERISK = -38;
+    static final int SOFTKEY_LEFT_PAREN = -39;
+    static final int SOFTKEY_RIGHT_PAREN = -40;
+    static final int SOFTKEY_AT = -41;
+    static final int SOFTKEY_POUND = -42;
+    static final int SOFTKEY_CARET = -43;
+    static final int SOFTKEY_AMPERSAND = -44;
+    static final int SOFTKEY_LEFT_BRACE = -45;
+    static final int SOFTKEY_RIGHT_BRACE = -46;
+    static final int SOFTKEY_BACKSLASH = -47;
+    static final int SOFTKEY_VERTICAL_BAR = -48;
+    static final int SOFTKEY_GRAVE = -49;
+    static final int SOFTKEY_TILDE = -50;
+    static final int SOFTKEY_TAB = -51;
+    static final int SOFTKEY_DIVIDE = -52;
+    static final int SOFTKEY_MINUS = -53;
+    static final int SOFTKEY_PLUS = -54;
+    static final int SOFTKEY_ANS = -10;
+    static final int SOFTKEY_BACK = -11;
+    static final int SOFTKEY_COPY = -12;
+    static final int SOFTKEY_DATA = -13;
+    static final int SOFTKEY_EDIT = -14;
+    static final int SOFTKEY_FONT = -15;
+    static final int SOFTKEY_HELP = -16;
+    static final int SOFTKEY_LAB = -17;
+    static final int SOFTKEY_MICRO = -18;
+    static final int SOFTKEY_SQUARE = -20;
+    static final int SOFTKEY_TERM = -22;
+    static final int SOFTKEY_SUPER = -23;
+    static final int SOFTKEY_SUB = -24;
+    static final int SOFTKEY_STOP = -25;
+    static final int SOFTKEY_MULTIPLY = -55;
+    static final int SOFTKEY_ASSIGN = -56;
+    static final int SOFTKEY_SIGMA = -57;
+
     /**
      * Android key code to ASCII translation table, unshifted.
      */
@@ -374,7 +417,7 @@ class PLATOKey {
             0x33,   // AKEYCODE_DEL
             0x7E,   // AKEYCODE_GRAVE
             0x0F,   // AKEYCODE_MINUS
-            0x5B,   // AKEYCODE_EQUALS
+            0x7B,   // AKEYCODE_EQUALS
             0x22,   // AKEYCODE_LEFT_BRACKET
             0x23,   // AKEYCODE_RIGHT_BRACKET
             0xFF,   // AKEYCODE_BACKSLASH TODO: (access key)
@@ -656,7 +699,7 @@ class PLATOKey {
             0xFF,   // AKEYCODE_SYM
             0xFF,   // AKEYCODE_EXPLORER
             0xFF,   // AKEYCODE_ENVELOPE
-            0xFF,   // AKEYCODE_ENTER
+            0x36,   // AKEYCODE_ENTER
             0xFF,   // AKEYCODE_DEL
             0xFF,   // AKEYCODE_GRAVE
             0x2F,   // AKEYCODE_MINUS

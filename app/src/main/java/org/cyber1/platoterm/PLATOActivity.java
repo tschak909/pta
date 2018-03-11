@@ -40,22 +40,25 @@ public class PLATOActivity extends AppCompatActivity {
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
-
     /**
      * PLATO Coordinate representing the leftmost screen coordinate.
      */
     private static final int SCREEN_LEFT = 0;
-
     /**
      * PLATO Coordinate representing the topmost screen coordinate.
      */
     private static final int SCREEN_TOP = 511;
-
     /**
      * This is a handler for pulling the latest data from the network service
      */
     private final Handler networkHandler = new Handler();
+    /**
+     * The handler for hiding the action bar.
+     */
     private final Handler mHideHandler = new Handler();
+    /**
+     * The second stage handler for showing actionbar.
+     */
     private final Runnable mShowPart2Runnable = new Runnable() {
         @Override
         public void run() {
@@ -66,21 +69,74 @@ public class PLATOActivity extends AppCompatActivity {
             }
         }
     };
-    private final Handler keytestHandler = new Handler();
+    /**
+     * The Network Service
+     */
     PLATONetworkService mService;
+    /**
+     * Activity is bound to the network service.
+     */
     boolean mBound = false;
+    /**
+     * The PLATO Protocol decoder/encoder
+     */
     PLATOProtocol protocol;
-    private final Runnable keytestRunnable = new Runnable() {
+    /**
+     * Is the keyboard currently shifted?
+     */
+    private boolean keyboardIsShifted = false;
+    /**
+     * Is sticky shift enabled? (caps lock)
+     */
+    private boolean stickyShift = false;
+    /**
+     * The previous keycode pressed.
+     */
+    private int lastKeycode = 0;
+    /**
+     * bitmap for the TERM area
+     */
+    private int[] termAreaBitmap;
+    /**
+     * Is this view visible?
+     */
+    private boolean mVisible;
+    /**
+     * The terminal RAM (mode, character sets, etc.)
+     */
+    private PLATORam ram;
+    /**
+     * The connection between the network service and this activity.
+     */
+    private ServiceConnection mConnection = new ServiceConnection() {
         @Override
-        public void run() {
-            Log.d("PLATOProtocol", "Smashing NEXT key.");
-            protocol.sendProcessedKey(0x16);
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PLATONetworkService.PLATONetworkBinder binder = (PLATONetworkService.PLATONetworkBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mBound = false;
         }
     };
-
+    /**
+     * The Soft Keyboard View
+     */
     private KeyboardView mKeyboardView;
+    /**
+     * The default alphanumeric keyboard.
+     */
     private Keyboard mKeyboard;
+    /**
+     * Alphanumeric keyboard with shifted keys.
+     */
     private Keyboard mKeyboardShifted;
+    /**
+     * Keyboard with Symbols
+     */
+    private Keyboard mKeyboardSym;
     /**
      * The current keyboard state, see above.
      */
@@ -89,6 +145,20 @@ public class PLATOActivity extends AppCompatActivity {
      * Current PLATO Font instance
      */
     private PLATOFont platoFont;
+    /**
+     * The runner for handling network data.
+     */
+    private final Runnable networkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
+                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
+                    processData(mService.getFromFIFO().poll());
+                }
+            }
+            networkHandler.post(networkRunnable);
+        }
+    };
     /**
      * Current X coordinate
      */
@@ -130,6 +200,14 @@ public class PLATOActivity extends AppCompatActivity {
      */
     private int fontheight = 16;
     /**
+     * Font size for custom font.
+     */
+    private int fontSize;
+    /**
+     * Custom font flags
+     */
+    private int fontFlags;
+    /**
      * The activity's PLATOView
      */
     private PLATOView mContentView;
@@ -154,49 +232,22 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
     /**
-     * Is the keyboard currently shifted?
+     * The hide runnable, used to hide the action bar.
      */
-    private boolean keyboardIsShifted = false;
-    private int[] termAreaBitmap;
-    private boolean mVisible;
     private final Runnable mHideRunnable = new Runnable() {
         @Override
         public void run() {
             hide();
         }
     };
-    private PLATORam ram;
     /**
-     * The runner for handling network data.
+     * The Show Keyboard button.
      */
-    private final Runnable networkRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mService != null && mService.isRunning() && !mService.getFromFIFO().isEmpty()) {
-                for (int i = 0; i < mService.getFromFIFO().size(); i++) {
-                    processData(mService.getFromFIFO().poll());
-                }
-            }
-            networkHandler.post(networkRunnable);
-        }
-    };
-    private ServiceConnection mConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            PLATONetworkService.PLATONetworkBinder binder = (PLATONetworkService.PLATONetworkBinder) service;
-            mService = binder.getService();
-            mBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mBound = false;
-        }
-    };
-    private int fontSize;
-    private int fontFlags;
     private FloatingActionButton mShowKeyboardButton;
-    private Keyboard mKeyboardSym;
+
+    /**
+     * The Keyboard Action listener for the keyboardview
+     */
     public KeyboardView.OnKeyboardActionListener keyboardActionListener = new KeyboardView.OnKeyboardActionListener() {
         @Override
         public void onPress(int primaryCode) {
@@ -211,12 +262,10 @@ public class PLATOActivity extends AppCompatActivity {
             long eventTime = System.currentTimeMillis();
             KeyEvent event = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, primaryCode, 0, 0, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE);
 
-            dispatchKeyEvent(event);
-
-            if (primaryCode == -3) {
+            if (primaryCode == -3) { // HIDE keyboard
                 hideKeyboard();
-            }
-            if (primaryCode == -6) {
+            } else if (primaryCode == -6) { // SYM key
+
                 switch (currentKeyboardState) {
                     case ALPHA:
                         mKeyboardView.setKeyboard(mKeyboardSym);
@@ -228,8 +277,27 @@ public class PLATOActivity extends AppCompatActivity {
                         break;
                 }
 
-            }
-            if (primaryCode == -5) {
+            } else if (primaryCode == -5) {
+                if (!stickyShift && lastKeycode == -5) {
+                    // Go sticky
+                    Log.d(this.getClass().getName(), "STICKY!!!");
+                    stickyShift = true;
+                    keyboardIsShifted = true;
+                    mKeyboardView.setShifted(true);
+                    mKeyboard.setShifted(true);
+                    mKeyboardSym.setShifted(true);
+                    mKeyboardShifted.setShifted(true);
+                    mKeyboardView.invalidateAllKeys();
+                    lastKeycode = 0;
+                } else if (stickyShift) {
+                    Log.d(this.getClass().getName(), "Turn off sticky.");
+                    stickyShift = false;
+                    keyboardIsShifted = false;
+                    mKeyboardView.setShifted(false);
+                    mKeyboardView.setKeyboard(mKeyboard);
+                    mKeyboardView.invalidateAllKeys();
+                    lastKeycode = 0;
+                }
                 switch (currentKeyboardState) {
                     case ALPHA:
                         mKeyboardView.setVisibility(View.GONE);
@@ -240,15 +308,23 @@ public class PLATOActivity extends AppCompatActivity {
                         keyboardIsShifted = true;
                         break;
                     case ALPHA_SHIFTED:
-                        mKeyboardView.setVisibility(View.VISIBLE);
-                        mKeyboardView.setKeyboard(mKeyboard);
-                        mKeyboardView.invalidateAllKeys();
-                        mKeyboardView.setShifted(false);
-                        currentKeyboardState = currentKeyboard.ALPHA;
-                        keyboardIsShifted = false;
+                        if (!stickyShift) {
+                            mKeyboardView.setKeyboard(mKeyboard);
+                            currentKeyboardState = currentKeyboard.ALPHA;
+                            keyboardIsShifted = false;
+                        }
+                        break;
+                    case SYMBOLS:
+                        keyboardIsShifted = !keyboardIsShifted;
                         break;
                 }
-            }
+            } else
+                doSoftKeyDown(primaryCode);
+
+            if (primaryCode > 0)
+                dispatchKeyEvent(event);
+
+            lastKeycode = primaryCode;
         }
 
         @Override
@@ -273,42 +349,83 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * Return the Network Service
+     *
+     * @return the PLATONetworkService object
+     */
     public PLATONetworkService getNetworkService() {
         return mService;
     }
 
+    /**
+     * Get the current character set.
+     * @return The current character set.
+     */
     public int getCurrentCharacterSet() {
         return currentCharacterSet;
     }
 
+    /**
+     * Set the current character set
+     * @param currentCharacterSet the character set # to set.
+     */
     public void setCurrentCharacterSet(int currentCharacterSet) {
         this.currentCharacterSet = currentCharacterSet;
     }
 
+    /**
+     * Get current X coordinate
+     * @return Current X coordinate (0-511)
+     */
     public int getCurrentX() {
         return currentX;
     }
 
+    /**
+     * Set current X coordinate
+     * @param currentX New current X coordinate (0-511)
+     */
     public void setCurrentX(int currentX) {
         this.currentX = currentX;
     }
 
+    /**
+     * Get the PLATORam for this activity
+     * @return the instantiated PLATORam object.
+     */
     public PLATORam getRam() {
         return ram;
     }
 
+    /**
+     * Set the current PLATORam object for this activity
+     * @param ram the new instantiated PLATORam object.
+     */
     public void setRam(PLATORam ram) {
         this.ram = ram;
     }
 
+    /**
+     * Get the current cursor Y position
+     * @return The current cursor Y position (0-511)
+     */
     public int getCurrentY() {
         return currentY;
     }
 
+    /**
+     * Set the current cursor Y position
+     * @param currentY The new cursor Y position (0-511)
+     */
     public void setCurrentY(int currentY) {
         this.currentY = currentY;
     }
 
+    /**
+     * Instantiate if needed, and ask PLATOProtocol to decode a byte
+     * @param aByte The byte to decode via the PLATOProtocol
+     */
     private void processData(Byte aByte) {
         if (protocol == null) {
             protocol = new PLATOProtocol(this, this.ram, this.platoFont);
@@ -317,6 +434,9 @@ public class PLATOActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Called when activity is started.
+     */
     @Override
     protected void onStart() {
         super.onStart();
@@ -327,6 +447,9 @@ public class PLATOActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Called when activity is stopped.
+     */
     @Override
     protected void onStop() {
         super.onStop();
@@ -336,6 +459,10 @@ public class PLATOActivity extends AppCompatActivity {
         mBound = false;
     }
 
+    /**
+     * Called when activity is first created
+     * @param savedInstanceState The saved instance state from onPause()
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -352,10 +479,11 @@ public class PLATOActivity extends AppCompatActivity {
         mKeyboardView.setPreviewEnabled(true);
         mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
+        mKeyboardSym = new Keyboard(getApplicationContext(), R.xml.keyboard_sym, 0);
 
-/*        if (getResources().getConfiguration().keyboard == 2) {
+        if (getResources().getConfiguration().keyboard == 2) {
             mShowKeyboardButton.setVisibility(View.GONE);
-        }*/
+        }
 
         mShowKeyboardButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -378,20 +506,15 @@ public class PLATOActivity extends AppCompatActivity {
         setCurrentFG("#FFFFFF");
         mContentView.setModeXOR(false);
         mContentView.setBoldWritingMode(false);
-
         setDeltaX(8);
         setDeltaY(16);
-
-//        // Set up the user interaction to manually show or hide the system UI.
-//        mContentView.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                toggle();
-//            }
-//        });
-
     }
 
+    /**
+     * Called after onCreate to ensure that view bits are initialized before
+     * kicking things off.
+     * @param savedInstanceState The saved instance state.
+     */
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
@@ -403,7 +526,6 @@ public class PLATOActivity extends AppCompatActivity {
             mContentView.testPattern();
         } else {
             networkHandler.post(networkRunnable);
-            keytestHandler.postDelayed(keytestRunnable, 6000);
         }
 
         // Trigger the initial hide() shortly after the activity has been
@@ -412,6 +534,9 @@ public class PLATOActivity extends AppCompatActivity {
         delayedHide(UI_ANIMATION_DELAY);
     }
 
+    /**
+     * Toggle view hide/show.
+     */
     private void toggle() {
         if (mVisible) {
             hide();
@@ -420,6 +545,9 @@ public class PLATOActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * hide the action bar.
+     */
     private void hide() {
         // Hide UI first
         ActionBar actionBar = getSupportActionBar();
@@ -433,6 +561,9 @@ public class PLATOActivity extends AppCompatActivity {
         mHideHandler.postDelayed(mHidePart2Runnable, UI_ANIMATION_DELAY);
     }
 
+    /**
+     * Show the action bar.
+     */
     @SuppressLint("InlinedApi")
     private void show() {
 //        // Show the system bar
@@ -480,30 +611,58 @@ public class PLATOActivity extends AppCompatActivity {
         mContentView.erase();
     }
 
+    /**
+     * Tell the view to enable or disable XOR mode
+     * @param b 1 = XOR on, 0 = XOR off.
+     */
     public void setXORMode(boolean b) {
         mContentView.setModeXOR(b);
     }
 
+    /**
+     * Is vertical writing mode enabled?
+     * @return true = enabled, false = disabled.
+     */
     public boolean isVerticalWritingMode() {
         return verticalWritingMode;
     }
 
+    /**
+     * Set the vertical writing mode
+     * @param verticalWritingMode true = enabled, false = disabled.
+     */
     public void setVerticalWritingMode(boolean verticalWritingMode) {
         this.verticalWritingMode = verticalWritingMode;
     }
 
+    /**
+     * are we in reverse writing mode (Right-to-left)
+     * @return 1 = right to left, 0 = left-to-right
+     */
     public boolean isReverseWritingMode() {
         return reverseWritingMode;
     }
 
+    /**
+     * Set a new reverse writing mode
+     * @param reverseWritingMode 1 = right-to-left 0=left-to-right
+     */
     public void setReverseWritingMode(boolean reverseWritingMode) {
         this.reverseWritingMode = reverseWritingMode;
     }
 
+    /**
+     * Is bold writing mode enabled?
+     * @return 1 = bold writing enabled, 0 = bold writing disabled.
+     */
     public boolean isBoldWritingMode() {
         return boldWritingMode;
     }
 
+    /**
+     * Set new bold writing mode
+     * @param boldWritingMode 1 = enabled, 0 = disabled.
+     */
     public void setBoldWritingMode(boolean boldWritingMode) {
         this.boldWritingMode = boldWritingMode;
         mContentView.setBoldWritingMode(boldWritingMode);
@@ -516,10 +675,18 @@ public class PLATOActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Get the current X margin
+     * @return The current X margin offset
+     */
     public int getMargin() {
         return margin;
     }
 
+    /**
+     * Set a new X margin
+     * @param margin the new X margin (0-511)
+     */
     public void setMargin(int margin) {
         this.margin = margin;
     }
@@ -531,26 +698,50 @@ public class PLATOActivity extends AppCompatActivity {
         setCurrentX(getCurrentX() - getDeltaX());
     }
 
+    /**
+     * Get the current X delta (change for next character cell)
+     * @return The current X delta.
+     */
     public int getDeltaX() {
         return deltaX;
     }
 
+    /**
+     * Set a new X delta (change for next character cell)
+     * @param deltaX new X delta (0-511)
+     */
     public void setDeltaX(int deltaX) {
         this.deltaX = deltaX;
     }
 
+    /**
+     * Get the current Y delta (change for next character cell)
+     * @return the current Y delta.
+     */
     public int getDeltaY() {
         return deltaY;
     }
 
+    /**
+     * Set the new Y delta (change for next character cell)
+     * @param deltaY The new Y delta (0-511)
+     */
     public void setDeltaY(int deltaY) {
         this.deltaY = deltaY;
     }
 
+    /**
+     * Get the font height for custom font.
+     * @return The custom font height
+     */
     public int getFontHeight() {
         return fontheight;
     }
 
+    /**
+     * Set a new custom font height
+     * @param fontheight the new custom font height in pixels.
+     */
     public void setFontHeight(int fontheight) {
         this.fontheight = fontheight;
     }
@@ -628,14 +819,25 @@ public class PLATOActivity extends AppCompatActivity {
         setTermAreaBitmap(mContentView.getPixels(0, 463, 511, 511));
     }
 
+    /**
+     * Get the term area bitmap (for CWS_SAVE and CWS_RESTORE)
+     * @return the Bitmap for the TERM area.
+     */
     public int[] getTermAreaBitmap() {
         return termAreaBitmap;
     }
 
+    /**
+     * Set the term area bitmap (for CWS_SAVE and CWS_RESTORE
+     * @param termAreaBitmap the new term area bitmap
+     */
     public void setTermAreaBitmap(int[] termAreaBitmap) {
         this.termAreaBitmap = termAreaBitmap;
     }
 
+    /**
+     * Blit the term area from CWS_SAVE back to the main view bitmap
+     */
     public void cwsTermRestore() {
         if (getTermAreaBitmap() == null)
             return;
@@ -681,18 +883,34 @@ public class PLATOActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Get the current custom font size.
+     * @return The current font size.
+     */
     public int getFontSize() {
         return fontSize;
     }
 
+    /**
+     * Set a new custom font size in pixels
+     * @param n the new font size in pixels.
+     */
     public void setFontSize(int n) {
         this.fontSize = (n < 1 ? 1 : (n > 63 ? 63 : n));
     }
 
+    /**
+     * Get the current custom font flags.
+     * @return The custom font flags.
+     */
     public int getFontFlags() {
         return fontFlags;
     }
 
+    /**
+     * Set new custom font flags.
+     * @param n The new custom font flags.
+     */
     public void setFontFlags(int n) {
         this.fontFlags = n; // temporary.
     }
@@ -706,18 +924,34 @@ public class PLATOActivity extends AppCompatActivity {
         mContentView.setTouchPanel(b);
     }
 
+    /**
+     * Get the current background color
+     * @return Current background color (as 32-bit integer)
+     */
     public int getCurrentFG() {
         return mContentView.getDrawingColorFG();
     }
 
+    /**
+     * Set a new current background color (as a #112233 hex triplet)
+     * @param newFG the new background color as #112233
+     */
     public void setCurrentFG(String newFG) {
         mContentView.setDrawingColorFG(Color.parseColor(newFG));
     }
 
+    /**
+     * Get current background color as 32-bit integer
+     * @return The current background color as 32-bit integer.
+     */
     public int getCurrentBG() {
         return mContentView.getDrawingColorBG();
     }
 
+    /**
+     * Set a new background color as hex triplet #112233
+     * @param newBG the new background color as hex triplet #112233
+     */
     public void setCurrentBG(String newBG) {
         this.mContentView.setDrawingColorBG(Color.parseColor(newBG));
     }
@@ -751,10 +985,18 @@ public class PLATOActivity extends AppCompatActivity {
         mContentView.invalidate();
     }
 
+    /**
+     * Get the current PLATOFont object
+     * @return The current PLATOFont object
+     */
     public PLATOFont getPlatoFont() {
         return platoFont;
     }
 
+    /**
+     * Set a new PLATOFont object
+     * @param font a PLATOFont object
+     */
     public void setFont(PLATOFont font) {
         this.platoFont = font;
     }
@@ -771,16 +1013,29 @@ public class PLATOActivity extends AppCompatActivity {
         mContentView.erase(x1, y1, x2, y2);
     }
 
+    /**
+     * Show the soft keyboard.
+     */
     private void showKeyboard() {
         mKeyboardView.setVisibility(View.VISIBLE);
         mShowKeyboardButton.setVisibility(View.GONE);
     }
 
+    /**
+     * Hide the soft keyboard.
+     */
     private void hideKeyboard() {
         mKeyboardView.setVisibility(View.GONE);
         mShowKeyboardButton.setVisibility(View.VISIBLE);
     }
 
+    /**
+     * Activity onKeydown callback, used primarily for physical keyboard and
+     * soft keyboard events that map to normal keys.
+     * @param keyCode the key code emitted
+     * @param event the event that was emitted
+     * @return true if key was processed, false if not.
+     */
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
 
@@ -789,6 +1044,7 @@ public class PLATOActivity extends AppCompatActivity {
 
         if (getResources().getConfiguration().keyboard == 2) {
             // Physical keyboard
+            doSpecialPhysicalKeys(keyCode,event);
             if (event.isCtrlPressed() && event.isShiftPressed()) {
                 protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForCTRLKeycode(keyCode));
             } else if (event.isCtrlPressed()) {
@@ -799,14 +1055,8 @@ public class PLATOActivity extends AppCompatActivity {
                 protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
             }
         } else {
-            if ((keyCode == 59) || (keyCode == 60)) {
-                Log.d(this.getClass().getName(), "Keyboard shift toggle: " + keyboardIsShifted);
-                keyboardIsShifted = !keyboardIsShifted;
-            }
-            if (keyCode < 0)
-                translateSoftkeyDown(keyCode);
-
-            if (keyboardIsShifted) {
+            // Soft keyboard.
+            if (keyboardIsShifted && !stickyShift) {
                 protocol.sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
             } else {
                 protocol.sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
@@ -816,56 +1066,127 @@ public class PLATOActivity extends AppCompatActivity {
     }
 
     /**
-     * Translate special PLATO softkey presses so they can be interpreted by normal
+     * Translate physical keys into PLATO keypresses.
+     *
+     * @param keyCode Hardware keycode
+     * @param event   event data (shift/ctrl/etc pressed?)
+     */
+    private void doSpecialPhysicalKeys(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case 9: // @
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x05);
+                }
+                break;
+            case 10: // #
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x24);
+                }
+                break;
+            case 13: // ^
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x40);
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x0A);
+                }
+                break;
+            case 14: // &
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x0E);
+                }
+                break;
+            case 71: // {
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x22);
+                }
+                break;
+            case 72: // }
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x23);
+                }
+                break;
+            case 73: // \
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x5D);
+                }
+                break;
+            case 74: // |
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x69);
+                }
+                break;
+            case 68: // `
+                if (event.isShiftPressed()) {
+                    protocol.sendProcessedKey(0x40);
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x4E);
+                } else {
+                    protocol.sendProcessedKey(0x40);
+                    protocol.sendProcessedKey(0x3C);
+                    protocol.sendProcessedKey(0x51);
+                }
+                break;
+        }
+    }
+
+
+    /**
+     * Translate special PLATO softkey presses and send out appropriate keys.
      * events.
      *
      * @param keyCode the intercepted keycode, less than 0.
      */
-    private void translateSoftkeyDown(int keyCode) {
+    private void doSoftKeyDown(int keyCode) {
         switch (keyCode) {
-            case -10:   // ANS
+            case PLATOKey.SOFTKEY_ANS:   // ANS
                 protocol.sendProcessedKey(0x12);
-            case -11:   // BACK
+            case PLATOKey.SOFTKEY_BACK:   // BACK
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x38);
                 else
                     protocol.sendProcessedKey(0x18);
                 break;
-            case -12:   // COPY
+            case PLATOKey.SOFTKEY_COPY:   // COPY
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x1B);
                 else
                     protocol.sendProcessedKey(0x3B);
                 break;
-            case -13:   // DATA
+            case PLATOKey.SOFTKEY_DATA:   // DATA
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x39);
                 else
                     protocol.sendProcessedKey(0x19);
                 break;
-            case -14:   // EDIT
+            case PLATOKey.SOFTKEY_EDIT:   // EDIT
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x37);
                 else
                     protocol.sendProcessedKey(0x17);
                 break;
-
-            case -15:   // FONT
+            case PLATOKey.SOFTKEY_FONT:   // FONT
                 protocol.sendProcessedKey(0x34);
                 break;
-            case -16:   // HELP
+            case PLATOKey.SOFTKEY_HELP:   // HELP
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x35);
                 else
                     protocol.sendProcessedKey(0x15);
                 break;
-            case -17:   // LAB
+            case PLATOKey.SOFTKEY_LAB:   // LAB
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x3D);
                 else
                     protocol.sendProcessedKey(0x1D);
                 break;
-            case -18:   // MICRO
+            case PLATOKey.SOFTKEY_MICRO:   // MICRO
                 protocol.sendProcessedKey(0x14);
                 break;
             case -20:   // SQUARE
@@ -873,28 +1194,135 @@ public class PLATOActivity extends AppCompatActivity {
                     protocol.sendProcessedKey(0x3C);
                 else
                     protocol.sendProcessedKey(0x1C);
-            case -22:   // TERM
+                break;
+            case PLATOKey.SOFTKEY_TERM:   // TERM
                 protocol.sendProcessedKey(0x32);
                 break;
-            case -23:   // SUPER
+            case PLATOKey.SOFTKEY_SUPER:   // SUPER
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x30);
                 else
                     protocol.sendProcessedKey(0x10);
                 break;
-            case -24:   // SUB
+            case PLATOKey.SOFTKEY_SUB:   // SUB
                 if (keyboardIsShifted)
                     protocol.sendProcessedKey(0x31);
                 else
                     protocol.sendProcessedKey(0x11);
                 break;
-            case -25:   // STOP
-                if (keyboardIsShifted)
+            case PLATOKey.SOFTKEY_STOP:   // STOP
+                if (keyboardIsShifted) {
                     protocol.sendProcessedKey(0x3A);
-                else
+                } else
                     protocol.sendProcessedKey(0x1A);
                 break;
+            case PLATOKey.SOFTKEY_LT:
+                protocol.sendProcessedKey(0x20);
+                break;
+            case PLATOKey.SOFTKEY_GT:
+                protocol.sendProcessedKey(0x21);
+                break;
+            case PLATOKey.SOFTKEY_LEFT_BRACKET:
+                protocol.sendProcessedKey(0x22);
+                break;
+            case PLATOKey.SOFTKEY_RIGHT_BRACKET:
+                protocol.sendProcessedKey(0x23);
+                break;
+            case PLATOKey.SOFTKEY_DOLLAR:
+                protocol.sendProcessedKey(0x24);
+                break;
+            case PLATOKey.SOFTKEY_PERCENT:
+                protocol.sendProcessedKey(0x25);
+                break;
+            case PLATOKey.SOFTKEY_UNDERLINE:
+                protocol.sendProcessedKey(0x26);
+                break;
+            case PLATOKey.SOFTKEY_APOSTROPHE:
+                protocol.sendProcessedKey(0x27);
+                break;
+            case PLATOKey.SOFTKEY_ASTERISK:
+                protocol.sendProcessedKey(0x28);
+                break;
+            case PLATOKey.SOFTKEY_LEFT_PAREN:
+                protocol.sendProcessedKey(0x29);
+                break;
+            case PLATOKey.SOFTKEY_RIGHT_PAREN:
+                protocol.sendProcessedKey(0x7B);
+                break;
+            case PLATOKey.SOFTKEY_AT:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x05);
+                break;
+            case PLATOKey.SOFTKEY_POUND:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x24);
+                break;
+            case PLATOKey.SOFTKEY_CARET:
+                protocol.sendProcessedKey(0x40);
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x0A);
+                break;
+            case PLATOKey.SOFTKEY_AMPERSAND:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x0E);
+                break;
+            case PLATOKey.SOFTKEY_LEFT_BRACE:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x22);
+                break;
+            case PLATOKey.SOFTKEY_RIGHT_BRACE:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x23);
+                break;
+            case PLATOKey.SOFTKEY_BACKSLASH:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x5D);
+                break;
+            case PLATOKey.SOFTKEY_VERTICAL_BAR:
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x69);
+                break;
+            case PLATOKey.SOFTKEY_GRAVE:
+                protocol.sendProcessedKey(0x40);
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x51);
+                break;
+            case PLATOKey.SOFTKEY_TILDE:
+                protocol.sendProcessedKey(0x40);
+                protocol.sendProcessedKey(0x3C);
+                protocol.sendProcessedKey(0x4E);
+                break;
+            case PLATOKey.SOFTKEY_DIVIDE:
+                protocol.sendProcessedKey(0x0B);
+                break;
+            case PLATOKey.SOFTKEY_MINUS:
+                protocol.sendProcessedKey(0x0F);
+                break;
+            case PLATOKey.SOFTKEY_PLUS:
+                protocol.sendProcessedKey(0x0E);
+                break;
+            case PLATOKey.SOFTKEY_MULTIPLY:
+                protocol.sendProcessedKey(0x0A);
+                break;
+            case PLATOKey.SOFTKEY_TAB:
+                protocol.sendProcessedKey(0x0C);
+                break;
+            case PLATOKey.SOFTKEY_ASSIGN:
+                protocol.sendProcessedKey(0x0d);
+                break;
+            case PLATOKey.SOFTKEY_SIGMA:
+                protocol.sendProcessedKey(0x2E);
         }
+
+        if (currentKeyboardState == currentKeyboard.SYMBOLS) {
+            mKeyboardSym.setShifted(false);
+            mKeyboard.setShifted(false);
+            mKeyboardView.setShifted(false);
+            mKeyboardView.setKeyboard(mKeyboard);
+            keyboardIsShifted = false;
+            currentKeyboardState = currentKeyboard.ALPHA;
+        }
+
     }
 
     /**

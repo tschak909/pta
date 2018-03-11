@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2018. Cyber1.org
+  -->
+
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+    android:horizontalGap="0px"
+    android:keyHeight="8%p"
+    android:keyWidth="10%p"
+    android:verticalGap="0px">
+    <Row
+        android:keyWidth="9%p"
+        android:rowEdgeFlags="top">
+        <Key
+            android:codes="-30"
+            android:keyEdgeFlags="left"
+            android:keyLabel="&lt;" />
+        <Key
+            android:codes="-31"
+            android:keyLabel="&gt;" />
+        <Key
+            android:codes="-32"
+            android:keyLabel="[" />
+        <Key
+            android:codes="-33"
+            android:keyLabel="]" />
+        <Key
+            android:codes="-34"
+            android:keyLabel="$" />
+        <Key
+            android:codes="-35"
+            android:keyLabel="%" />
+        <Key
+            android:codes="-36"
+            android:keyLabel="_" />
+        <Key
+            android:codes="-37"
+            android:keyLabel="'" />
+        <Key
+            android:codes="-38"
+            android:keyLabel="*" />
+        <Key
+            android:codes="-39"
+            android:keyLabel="(" />
+        <Key
+            android:codes="-40"
+            android:keyEdgeFlags="right"
+            android:keyLabel=")" />
+    </Row>
+
+    <Row android:keyWidth="9%p">
+        <Key
+            android:codes="-41"
+            android:keyEdgeFlags="left"
+            android:keyLabel="\u0040" />
+        <Key
+            android:codes="-42"
+            android:keyLabel="#" />
+        <Key
+            android:codes="-43"
+            android:keyLabel="^" />
+        <Key
+            android:codes="-44"
+            android:keyLabel="&amp;" />
+        <Key
+            android:codes="-45"
+            android:keyLabel="{" />
+        <Key
+            android:codes="-46"
+            android:keyLabel="}" />
+        <Key
+            android:codes="-47"
+            android:keyLabel="\u005c" />
+        <Key
+            android:codes="-48"
+            android:keyLabel="|" />
+        <Key
+            android:codes="-57"
+            android:keyLabel="\u03a3" />
+        <Key
+            android:codes="55"
+            android:keyLabel="," />
+        <Key
+            android:codes="56"
+            android:keyEdgeFlags="right"
+            android:keyLabel="." />
+    </Row>
+
+    <Row>
+        <Key
+            android:codes="-51"
+            android:keyLabel="TAB" />
+        <Key
+            android:codes="-52"
+            android:keyLabel="\u00F7" />
+        <Key
+            android:codes="-53"
+            android:keyLabel="-" />
+        <Key
+            android:codes="-54"
+            android:keyLabel="+" />
+        <Key
+            android:codes="-10"
+            android:keyLabel="ANS"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-12"
+            android:keyLabel="COPY"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-13"
+            android:keyLabel="DATA"
+            android:keyWidth="13%p" />
+        <Key
+            android:codes="-14"
+            android:keyLabel="EDIT"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-15"
+            android:keyEdgeFlags="right"
+            android:keyLabel="FONT"
+            android:keyWidth="11.8%p" />
+    </Row>
+
+    <Row>
+        <Key
+            android:codes="-56"
+            android:keyEdgeFlags="left"
+            android:keyIcon="@drawable/ic_assignment_white_24dp" />
+        <Key
+            android:codes="-55"
+            android:keyLabel="\u00D7" />
+        <Key
+            android:codes="-25"
+            android:keyLabel="STOP"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-17"
+            android:keyLabel="LAB"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-18"
+            android:keyLabel="MICRO"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-20"
+            android:keyLabel="\u25A1"
+            android:keyWidth="10.5%p" />
+        <Key
+            android:codes="-22"
+            android:keyLabel="TERM"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-23"
+            android:keyLabel="SUPER"
+            android:keyWidth="11.5%p" />
+        <Key
+            android:codes="-24"
+            android:keyEdgeFlags="right"
+            android:keyLabel="SUB"
+            android:keyWidth="11.5%p" />
+    </Row>
+
+    <Row android:rowEdgeFlags="bottom">
+        <Key
+            android:codes="-3"
+            android:keyEdgeFlags="left"
+            android:keyIcon="@drawable/keyboard_close"
+            android:keyWidth="15%p" />
+        <Key
+            android:codes="-6"
+            android:keyLabel="ABC"
+            android:keyWidth="15%p" />
+        <Key
+            android:codes="-5"
+            android:keyIcon="@drawable/ic_keyboard_capslock_black_24dp"
+            android:keyWidth="15%p" />
+        <Key
+            android:codes="-16"
+            android:keyLabel="HELP" />
+        <Key
+            android:codes="-11"
+            android:keyLabel="BACK"
+            android:keyWidth="25%p" />
+        <Key
+            android:codes="66"
+            android:keyEdgeFlags="right"
+            android:keyLabel="NEXT"
+            android:keyWidth="25%p" />
+    </Row>
+</Keyboard>
