@@ -169,8 +169,8 @@ class PLATOFont {
     private int[] plato_m3;
 
     PLATOFont() {
-        this.plato_m2 = new int[64 * 8];
-        this.plato_m3 = new int[64 * 8];
+        this.plato_m2 = new int[128 * 8];
+        this.plato_m3 = new int[128 * 8];
     }
 
     int[] getPlato_m0() {

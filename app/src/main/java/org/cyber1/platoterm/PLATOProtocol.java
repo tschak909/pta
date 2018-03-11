@@ -176,6 +176,10 @@ class PLATOProtocol {
         this.dumbTerminal = true; // Initially bring up in Dumb terminal mode.
         setCurrentAscState(ascState.NONE);
         setAscBytes(0); // Temporary until we get the secondary ascii states done.
+        getRAM().writeRAM(PLATORam.C2ORIGIN, (byte) (PLATORam.M2ADDR & 0xFF));
+        getRAM().writeRAM(PLATORam.C2ORIGIN + 1, (byte) (PLATORam.M2ADDR >> 8));
+        getRAM().writeRAM(PLATORam.C3ORIGIN, (byte) (PLATORam.M3ADDR & 0xFF));
+        getRAM().writeRAM(PLATORam.C3ORIGIN + 1, (byte) (PLATORam.M3ADDR >> 8));
     }
 
     private ascState getCurrentAscState() {
@@ -1153,9 +1157,6 @@ class PLATOProtocol {
             i = (b & 0x80) >> 7;
         } else {
             b = (byte) ((b - 0x20) & 0x3F);
-            // TODO: Come back here and split this out for charsets 2 and 3.
-            if (i == 2) {
-            }
         }
         if (b != (byte) 0xff) {
             b &= 0x7F;
@@ -1222,26 +1223,30 @@ class PLATOProtocol {
      */
     private void mode2(int n) {
         int chaddr;
+        int mar;
+        int origin;
+
         getRAM().writeRAM(getRAM().getMAR(), (byte) (n & 0xFF));
         getRAM().writeRAM(getRAM().getMAR() + 1, (byte) ((n >> 8) & 0xFF));
 
         // translate PPT ram address to character memory address
-        chaddr = getRAM().getMAR() - getRAM().readRAMW(PLATORam.C2ORIGIN);
+        mar = getRAM().getMAR();
+        origin = getRAM().readRAMW(PLATORam.C2ORIGIN);
+        chaddr = mar - origin;
         if (chaddr < 0 || chaddr > 127 * 16) {
             Log.d(this.getClass().getName(), "mode2 - memdata 0x" + String.format("%04X", n & 0xffff) + " to addr 0x" + String.format("%04X", getRAM().getMAR()));
         } else {
             chaddr /= 2;
             if (((n >> 16) & 3) == 0) {
                 // Load data
-                Log.d(this.getClass().getName(), "mode 2 - character memdata " + String.format("%04X", n & 0xffff) + " to charword: " + String.format("%04X", chaddr));
-                if (chaddr < 512) {
-                    Log.d(this.getClass().getName(), "Loading into Character set memory 2 address: " + String.format("%04X", chaddr) + " value: " + String.format("%04X", chaddr));
+                if (chaddr < 0x200) {
+                    Log.d(this.getClass().getName(), "mode2 - M2 load - character memdata " + String.format("%04X", n & 0xffff) + " to charword: " + String.format("%04X", chaddr));
                     getPlatoFont().getPlato_m2()[chaddr] = n & 0xFFFF;
                 } else {
-                    Log.d(this.getClass().getName(), "Loading into Character set memory 3 address: " + String.format("%04X", chaddr) + " value: " + String.format("%04X", chaddr));
-                    getPlatoFont().getPlato_m3()[chaddr] = n & 0xFFFF;
-                    ++chaddr;
+                    Log.d(this.getClass().getName(), "mode2 - M3 load - character memdata " + String.format("%04X", n & 0xffff) + " to charword: " + String.format("%04X", chaddr));
+                    getPlatoFont().getPlato_m3()[chaddr - 0x0200] = n & 0xFFFF;
                 }
+                ++chaddr;
             }
         }
         getRAM().setMAR(getRAM().getMAR() + 2);
