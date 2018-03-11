@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class PLATONetworkService extends Service {
     public static final int BUFFER_SIZE = 3000;
     public static final int BUFFER_SIZE_ON = BUFFER_SIZE / 8;
-    private static final String DEFAULT_HOST = "dcerouter";
+    private static final String DEFAULT_HOST = "cyberserv.org";
     private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
     private boolean flowStopped = false;
