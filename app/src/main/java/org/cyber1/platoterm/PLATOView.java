@@ -34,7 +34,7 @@ public class PLATOView extends View {
     private static final int CHARSET_0 = 0;
     private static final int CHAR_A = 1;
     private static final boolean AUTOBS_TEST = true;
-
+    int[] walkstack;
     private Bitmap mBitmap;
     private DisplayMetrics mDisplayMetrics;
     private RectF mRenderRect;
@@ -47,7 +47,6 @@ public class PLATOView extends View {
     private boolean modeXOR;
     private boolean touchPanel;
     private PLATOFont font;
-
 
     public PLATOView(Context context) {
         super(context);
@@ -129,6 +128,8 @@ public class PLATOView extends View {
     }
 
     private void init(AttributeSet attrs, int defStyle) {
+
+        walkstack = new int[512 * 512 + 2];
 
         if (mBitmap == null) {
             mBitmap = Bitmap.createBitmap(WIDTH, HEIGHT, BITMAP_CONFIG);
@@ -271,9 +272,12 @@ public class PLATOView extends View {
      * Erase the entire display.
      */
     public void erase() {
-        mBitmap.eraseColor(0);
+        if (isModeXOR() || (getRam().getWeMode() & 1) == 1) {
+            mBitmap.eraseColor(drawingColorBG);
+        } else {
+            mBitmap.eraseColor(drawingColorFG);
+        }
     }
-
 
     /**
      * Erase a block of the display.
@@ -473,18 +477,12 @@ public class PLATOView extends View {
         mBitmap.setPixels(termAreaBitmap, 0, WIDTH, x1, y1, x2, y2);
     }
 
-
-/*
     public void doPaint(int x, int y, int pat) {
-        // doPaintWalker(x, y, pat, 0);
-        //doPaintWalker(x, y, pat, 1);
+//        doPaintWalker(x, y, pat, 0);
+//        doPaintWalker(x, y, pat, 1);
     }
-*/
 
-/*
     public void doPaintWalker(int x, int y, int pat, int pass) {
-*/
-/*
         int sp;
         int maxsp=0;
         int pixels=0;
@@ -502,7 +500,7 @@ public class PLATOView extends View {
                 }
                 else
                 {
-                    d=getFont().getPlato_m1()[pat];
+                    d = getFont().getPlato_m1()[pat - 128];
                 }
             }
             else
@@ -548,11 +546,9 @@ public class PLATOView extends View {
             }
 
         }
-*//*
 
 
     }
-*/
 
     /**
      * A view test case.

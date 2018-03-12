@@ -1114,7 +1114,8 @@ class PLATOProtocol {
             case 4:  // Block erase mode
                 Log.d(this.getClass().getName(), "mode4 pre assemblecoordinate");
                 if (assembleCoordinate(b)) {
-                    mode4((lastCoordinateX << 9));
+                    modeWords++;
+                    mode4((lastCoordinateX << 9) + lastCoordinateY);
                 }
                 decoded = true;
                 break;
