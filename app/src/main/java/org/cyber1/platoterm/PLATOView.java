@@ -272,11 +272,18 @@ public class PLATOView extends View {
      * Erase the entire display.
      */
     public void erase() {
+        boolean savexor = isModeXOR();
+        int saveMode = getRam().getMode();
+
+        setModeXOR(false);
+        getRam().setMode(2);
         if (isModeXOR() || (getRam().getWeMode() & 1) == 1) {
-            mBitmap.eraseColor(drawingColorBG);
-        } else {
             mBitmap.eraseColor(drawingColorFG);
+        } else {
+            mBitmap.eraseColor(drawingColorBG);
         }
+        setModeXOR(savexor);
+        getRam().setMode(saveMode);
     }
 
     /**
@@ -316,7 +323,6 @@ public class PLATOView extends View {
                 setPoint(x, y, currentColor, isModeXOR());
             }
         }
-
         // todo: implement textmap.
     }
 
