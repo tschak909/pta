@@ -31,7 +31,11 @@
         <service
             android:name=".PLATONetworkService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" />
+
+        <activity
+            android:name=".PLATOSettingsActivity"
+            android:label="@string/title_activity_platosettings"></activity>
     </application>
 
 </manifest>

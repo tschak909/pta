@@ -102,6 +102,15 @@ public class PLATOActivity extends AppCompatActivity {
      */
     private boolean mVisible;
     /**
+     * The hide runnable, used to hide the action bar.
+     */
+    private final Runnable mHideRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hide();
+        }
+    };
+    /**
      * The terminal RAM (mode, character sets, etc.)
      */
     private PLATORam ram;
@@ -229,15 +238,6 @@ public class PLATOActivity extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-        }
-    };
-    /**
-     * The hide runnable, used to hide the action bar.
-     */
-    private final Runnable mHideRunnable = new Runnable() {
-        @Override
-        public void run() {
-            hide();
         }
     };
     /**
@@ -1323,6 +1323,18 @@ public class PLATOActivity extends AppCompatActivity {
             currentKeyboardState = currentKeyboard.ALPHA;
         }
 
+    }
+
+    /**
+     * Go to sleep for 8ms.
+     */
+    public void nullSleep() {
+        try {
+            mContentView.invalidate();
+            Thread.sleep(8); // 8ms in ASCII.
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

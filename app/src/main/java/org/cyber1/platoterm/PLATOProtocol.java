@@ -368,11 +368,8 @@ class PLATOProtocol {
         // auxiliary non-printable ASCII control characters not bolted to escape.
         switch (b) {
             case ASCII_NUL:
-                try {
-                    Thread.sleep(8); // 8ms in ASCII.
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                Log.d(this.getClass().getName(), "Got a NOP. Go sleepies for 8ms...");
+                getPlatoActivity().nullSleep();
                 decoded = true;
                 break;
             case ASCII_BACKSPACE:
