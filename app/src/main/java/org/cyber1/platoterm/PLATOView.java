@@ -11,6 +11,7 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 /**
@@ -34,7 +35,12 @@ public class PLATOView extends View {
     private static final int CHARSET_0 = 0;
     private static final int CHAR_A = 1;
     private static final boolean AUTOBS_TEST = true;
-    int[] walkstack;
+    int paddingLeft;
+    int paddingTop;
+    int paddingRight;
+    int paddingBottom;
+    int contentWidth;
+    int contentHeight;
     private Bitmap mBitmap;
     private DisplayMetrics mDisplayMetrics;
     private RectF mRenderRect;
@@ -47,6 +53,12 @@ public class PLATOView extends View {
     private boolean modeXOR;
     private boolean touchPanel;
     private PLATOFont font;
+    private int[] walkstack;
+    private int currentPaintX;
+    private int currentPaintY;
+    private int currentPaintPixel;
+    private int currentPaintChar;
+
 
     public PLATOView(Context context) {
         super(context);
@@ -148,13 +160,13 @@ public class PLATOView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        int paddingLeft = getPaddingLeft();
-        int paddingTop = getPaddingTop();
-        int paddingRight = getPaddingRight();
-        int paddingBottom = getPaddingBottom();
+        paddingLeft = getPaddingLeft();
+        paddingTop = getPaddingTop();
+        paddingRight = getPaddingRight();
+        paddingBottom = getPaddingBottom();
 
-        int contentWidth = getWidth() - paddingLeft - paddingRight;
-        int contentHeight = getHeight() - paddingTop - paddingBottom;
+        contentWidth = getWidth() - paddingLeft - paddingRight;
+        contentHeight = getHeight() - paddingTop - paddingBottom;
 
         mRenderRect.top = paddingTop;
         mRenderRect.left = (contentWidth / 2) - (contentHeight / 2) + paddingLeft;
@@ -484,39 +496,38 @@ public class PLATOView extends View {
     }
 
     public void doPaint(int x, int y, int pat) {
-//        doPaintWalker(x, y, pat, 0);
-//        doPaintWalker(x, y, pat, 1);
+        doPaintWalker(x, y, pat, 0);
+        doPaintWalker(x, y, pat, 1);
     }
 
     public void doPaintWalker(int x, int y, int pat, int pass) {
         int sp;
-        int maxsp=0;
         int pixels=0;
-        int w=0,i=0,d=0;
-        int currentChar;
+        int maxsp = 0;
+        int w;
+        int d;
+        int i;
+        boolean isCharFill = false;
 
-        if (pat>0)
-        {
-            if (pat<256)
-            {
-                pat+=32;
-                if (pat<128)
-                {
-                    d=getFont().getPlato_m0()[pat];
+        sp = -1;
+        walkstack[++sp] = 0;
+
+        // If we have a pattern set, grab the character and set up
+        // a character paint fill.
+        if (pat>0) {
+            isCharFill = true;
+            if (pat<256) {
+                pat += 32;
+                if (pat < 128) {
+                    d = PLATOFont.asciiM0[pat];
+                } else {
+                    d = PLATOFont.asciiM1[pat - 128];
                 }
-                else
-                {
-                    d = getFont().getPlato_m1()[pat - 128];
-                }
-            }
-            else
-            {
-                d=pat;
+            } else {
+                d = pat;
             }
 
-            if (d==0xff)
-            {
-                // Trying to do char fill with a non-character.
+            if (d == 0xff) {
                 return;
             }
 
@@ -524,36 +535,144 @@ public class PLATOView extends View {
             i = d >> 7;
             d &= 0x7f;
 
-            // Form the offset to the character pattern
-            if (i==0)
-            {
-                currentChar=getFont().getPlato_m0()[8*d];
+            if (i==0) {
+                currentPaintChar = getFont().getPlato_m0()[d];
+            } else if (i==1) {
+                currentPaintChar = getFont().getPlato_m1()[d];
+            } else {
+                // TODO: This is probably completely wrong
+                if (d < 0x40)
+                    currentPaintChar = getFont().getPlato_m2()[d];
+                else
+                    currentPaintChar = getFont().getPlato_m3()[d];
             }
-            else if (i==1)
-            {
-                currentChar=getFont().getPlato_m1()[8*d];
-            }
-            else if (i==2)
-            {
-                currentChar=getFont().getPlato_m2()[8*d];
-            }
-            else if (i==3)
-            {
-                currentChar=getFont().getPlato_m3()[8*d];
-            }
+
         }
-        sp = -1;
-        walkstack[++sp] = 0;
-        while (sp>=0)
-        {
-            if (sp > maxsp)
-            {
+
+        while (sp >= 0) {
+            if (sp > maxsp) {
+                assert (sp < walkstack.length - 1) : "Stack pointer out of bounds.";
                 maxsp=sp;
             }
+            currentPaintX = x;
+            currentPaintY = y;
+            currentPaintPixel = mBitmap.getPixel(currentPaintX, currentPaintY);
 
+            // Each time through the loop, we increment the top of stack
+            // value, to reflect progress in the walk.
+
+            w = walkstack[sp];
+            walkstack[sp]++;
+
+            switch (w) {
+                case 0:
+                    // If pixel is already filled, leave this level.
+                    // Otherwise, fill the pixel, and explore to the left.
+                    if (paintWalkDone(currentPaintPixel, pass)) {
+                        walkstack[sp] = 4;
+                        break;
+                    }
+                    if (pass > 0) {
+                        if (isCharFill) {
+                            // Char fills happen on coarse boundaries
+                            int cx = x & 7;
+                            int cy = y & 15;
+
+                            // TODO: pick foreground or background pixel based on coarse position
+                 /*           if ((cp[cx] & (0x8000 >> cy)) != 0)
+                            {
+                                // Foreground pixel, paint it
+                        *pmap = m_fgpix;
+                            }
+                            else
+                            {
+                                // Backround pixel, unmark it
+                        *pmap |= m_maxalpha;
+                            }
+                 */
+                        } else {
+                            currentPaintPixel = drawingColorFG;
+                            mBitmap.setPixel(x, y, currentPaintPixel);
+                        }
+                    } else {
+                        // Mark pixel by setting alpha to zero
+                        currentPaintPixel = drawingColorFG & 0xFFFFFF;
+                        mBitmap.setPixel(x, y, currentPaintPixel);
+                    }
+                    pixels++;
+                    if (x > 0) {
+                        x--;
+                        walkstack[++sp] = 0;
+                    }
+                    break;
+                case 1:
+                    // Explore to the right
+                    if (x < 511) {
+                        x++;
+                        walkstack[++sp] = 0;
+                    }
+                    break;
+                case 2:
+                    // Explore up
+                    if (y < 511) {
+                        y++;
+                        walkstack[++sp] = 0;
+                    }
+                    break;
+                case 3:
+                    // Explore down
+                    if (y > 0) {
+                        y--;
+                        walkstack[++sp] = 0;
+                    }
+                    break;
+                case 4:
+                    // Done exploring at this pixel. Pop stack. We have
+                    // to adjust the coordinate, which is done based on
+                    // the next to stop stack entry -- which reflects
+                    // where the previous level is in its exploration, i.e.
+                    // which coordinate adjustment it made before pushing
+                    // this level. Note that the previous level entry reflects
+                    // the increment of the stack value, so the case labels
+                    // are one higher than the corresponding ones above.
+                    --sp;
+                    if (sp < 0) {
+                        break;
+                    }
+                    switch (walkstack[sp]) {
+                        case 1:
+                            x++;
+                            break;
+                        case 2:
+                            x--;
+                            break;
+                        case 3:
+                            y--;
+                            break;
+                        case 4:
+                            y++;
+                            break;
+                    }
+            }
         }
 
+        Log.d(this.getClass().getName(), "doPaintWalker: " + String.format("%d", pixels) + " pixels, " + String.format("%d", maxsp) + " max stack.");
 
+    }
+
+    /**
+     * Determine if the paint walk is done by checking for background pixel, or
+     * marked pixels (those with an alpha of 0, as drawn pixels have an alpha
+     * of 255.
+     *
+     * @param currentPaintPixel The current bitmap pixel
+     * @param pass              Which pass are we in?
+     * @return true if we're done, false if we aren't.
+     */
+    private boolean paintWalkDone(int currentPaintPixel, int pass) {
+        return ((pass != 0 && (currentPaintPixel & 0xFF000000) != 0) ||
+                (pass == 0 && (currentPaintPixel == drawingColorBG ||
+                        (currentPaintPixel & 0xFF000000) == 0)));
     }
 
     /**
@@ -580,6 +699,18 @@ public class PLATOView extends View {
 
     public void setFont(PLATOFont font) {
         this.font = font;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (mRenderRect.contains(event.getX(), event.getY())) {
+            float scaleX = contentWidth / 512;
+            float scaleY = contentHeight / 512;
+            float x = (event.getX() - mRenderRect.left) / scaleX;
+            float y = (event.getY() - mRenderRect.top) / scaleY;
+            Log.d(this.getClass().getName(), "TOUCH   X: " + x + "  Y: " + y);
+        }
+        return super.onTouchEvent(event);
     }
 }
 
