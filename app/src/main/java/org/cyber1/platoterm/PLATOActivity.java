@@ -9,7 +9,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -60,22 +59,15 @@ public class PLATOActivity extends AppCompatActivity {
      * Activity is bound to the network service.
      */
     boolean mBound = false;
+
     /**
-     * Is the keyboard currently shifted?
+     * The Soft Keyboard View
      */
-    private boolean keyboardIsShifted = false;
+    KeyboardView mKeyboardView;
     /**
-     * Is sticky shift enabled? (caps lock)
+     * Keyboard Handler
      */
-    private boolean stickyShift = false;
-    /**
-     * The previous keycode pressed.
-     */
-    private int lastKeycode = 0;
-    /**
-     * Is this view visible?
-     */
-    private boolean mVisible;
+    private PLATOKeyboardHandler mKeyboardHandler;
     /**
      * The connection between the network service and this activity.
      */
@@ -93,25 +85,9 @@ public class PLATOActivity extends AppCompatActivity {
         }
     };
     /**
-     * The Soft Keyboard View
+     * Is view visible?
      */
-    private KeyboardView mKeyboardView;
-    /**
-     * The default alphanumeric keyboard.
-     */
-    private Keyboard mKeyboard;
-    /**
-     * Alphanumeric keyboard with shifted keys.
-     */
-    private Keyboard mKeyboardShifted;
-    /**
-     * Keyboard with Symbols
-     */
-    private Keyboard mKeyboardSym;
-    /**
-     * The current keyboard state, see above.
-     */
-    private currentKeyboard currentKeyboardState;
+    private boolean mVisible;
 
     /**
      * The activity's PLATOView
@@ -152,110 +128,6 @@ public class PLATOActivity extends AppCompatActivity {
     private FloatingActionButton mShowKeyboardButton;
 
     /**
-     * The Keyboard Action listener for the keyboardview
-     */
-    public KeyboardView.OnKeyboardActionListener keyboardActionListener = new KeyboardView.OnKeyboardActionListener() {
-        @Override
-        public void onPress(int primaryCode) {
-        }
-
-        @Override
-        public void onRelease(int primaryCode) {
-        }
-
-        @Override
-        public void onKey(int primaryCode, int[] keyCodes) {
-            long eventTime = System.currentTimeMillis();
-            KeyEvent event = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, primaryCode, 0, 0, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE);
-
-            if (primaryCode == -3) { // HIDE keyboard
-                hideKeyboard();
-            } else if (primaryCode == -6) { // SYM key
-
-                switch (currentKeyboardState) {
-                    case ALPHA:
-                        mKeyboardView.setKeyboard(mKeyboardSym);
-                        currentKeyboardState = currentKeyboard.SYMBOLS;
-                        break;
-                    case SYMBOLS:
-                        mKeyboardView.setKeyboard(mKeyboard);
-                        currentKeyboardState = currentKeyboard.ALPHA;
-                        break;
-                }
-
-            } else if (primaryCode == -5) {
-                if (!stickyShift && lastKeycode == -5) {
-                    // Go sticky
-                    Log.d(this.getClass().getName(), "STICKY!!!");
-                    stickyShift = true;
-                    keyboardIsShifted = true;
-                    mKeyboardView.setShifted(true);
-                    mKeyboard.setShifted(true);
-                    mKeyboardSym.setShifted(true);
-                    mKeyboardShifted.setShifted(true);
-                    mKeyboardView.invalidateAllKeys();
-                    lastKeycode = 0;
-                } else if (stickyShift) {
-                    Log.d(this.getClass().getName(), "Turn off sticky.");
-                    stickyShift = false;
-                    keyboardIsShifted = false;
-                    mKeyboardView.setShifted(false);
-                    mKeyboardView.setKeyboard(mKeyboard);
-                    mKeyboardView.invalidateAllKeys();
-                    lastKeycode = 0;
-                }
-                switch (currentKeyboardState) {
-                    case ALPHA:
-                        mKeyboardView.setVisibility(View.GONE);
-                        mKeyboardView.setKeyboard(mKeyboardShifted);
-                        mKeyboardView.setShifted(true);
-                        mKeyboardView.setVisibility(View.VISIBLE);
-                        currentKeyboardState = currentKeyboard.ALPHA_SHIFTED;
-                        keyboardIsShifted = true;
-                        break;
-                    case ALPHA_SHIFTED:
-                        if (!stickyShift) {
-                            mKeyboardView.setKeyboard(mKeyboard);
-                            currentKeyboardState = currentKeyboard.ALPHA;
-                            keyboardIsShifted = false;
-                        }
-                        break;
-                    case SYMBOLS:
-                        keyboardIsShifted = !keyboardIsShifted;
-                        break;
-                }
-            } else
-                doSoftKeyDown(primaryCode);
-
-            if (primaryCode > 0)
-                dispatchKeyEvent(event);
-
-            lastKeycode = primaryCode;
-        }
-
-        @Override
-        public void onText(CharSequence text) {
-        }
-
-        @Override
-        public void swipeLeft() {
-        }
-
-        @Override
-        public void swipeRight() {
-        }
-
-        @Override
-        public void swipeDown() {
-            hideKeyboard();
-        }
-
-        @Override
-        public void swipeUp() {
-        }
-    };
-
-    /**
      * Called when activity is started.
      */
     @Override
@@ -286,19 +158,18 @@ public class PLATOActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mKeyboardHandler = new PLATOKeyboardHandler(this);
+
         setContentView(R.layout.activity_platoterm);
 
         mVisible = true;
         mContentView = (PLATOView) findViewById(R.id.fullscreen_content);
         mKeyboardView = (KeyboardView) findViewById(R.id.keyboard_view);
-        mKeyboard = new Keyboard(getApplicationContext(), R.xml.keyboard, R.integer.keyboard_normal);
-        mKeyboardShifted = new Keyboard(getApplicationContext(), R.xml.keyboard, R.integer.keyboard_shifted);
-        mKeyboardView.setKeyboard(mKeyboard);
-        currentKeyboardState = currentKeyboard.ALPHA;
+
+        mKeyboardView.setKeyboard(mKeyboardHandler.mKeyboard);
         mKeyboardView.setPreviewEnabled(true);
-        mKeyboardView.setOnKeyboardActionListener(keyboardActionListener);
+        mKeyboardView.setOnKeyboardActionListener(mKeyboardHandler.keyboardActionListener);
         mShowKeyboardButton = (FloatingActionButton) findViewById(R.id.show_keyboard);
-        mKeyboardSym = new Keyboard(getApplicationContext(), R.xml.keyboard_sym, 0);
 
         if (getResources().getConfiguration().keyboard == 2) {
             mShowKeyboardButton.setVisibility(View.GONE);
@@ -407,7 +278,7 @@ public class PLATOActivity extends AppCompatActivity {
     /**
      * Hide the soft keyboard.
      */
-    private void hideKeyboard() {
+    void hideKeyboard() {
         mKeyboardView.setVisibility(View.GONE);
         mShowKeyboardButton.setVisibility(View.VISIBLE);
     }
@@ -421,299 +292,10 @@ public class PLATOActivity extends AppCompatActivity {
      */
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Log.d(this.getClass().getName(), "Keydown - 0x" + String.format("%02X", keyCode));
-        // Process SHIFT keys, they're the same for PLATO.
-
-        if (getResources().getConfiguration().keyboard == 2) {
-            // Physical keyboard
-            doSpecialPhysicalKeys(keyCode,event);
-            if (event.isCtrlPressed() && event.isShiftPressed()) {
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(PLATOKey.getShiftedPLATOcodeForCTRLKeycode(keyCode));
-            } else if (event.isCtrlPressed()) {
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(PLATOKey.getPLATOcodeForCTRLKeycode(keyCode));
-            } else if (event.isShiftPressed()) {
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
-            } else {
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
-            }
-        } else {
-            // Soft keyboard.
-            if (keyboardIsShifted && !stickyShift) {
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(PLATOKey.getShiftedPLATOcodeForKeycode(keyCode));
-            } else {
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(PLATOKey.getPLATOcodeForKeycode(keyCode));
-            }
-        }
+        mKeyboardHandler.doPhysicalKeyDown(keyCode, event);
         return super.onKeyDown(keyCode, event);
     }
 
-    /**
-     * Translate physical keys into PLATO keypresses.
-     *
-     * @param keyCode Hardware keycode
-     * @param event   event data (shift/ctrl/etc pressed?)
-     */
-    private void doSpecialPhysicalKeys(int keyCode, KeyEvent event) {
-        switch (keyCode) {
-            case 9: // @
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x05);
-                }
-                break;
-            case 10: // #
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x24);
-                }
-                break;
-            case 13: // ^
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x40);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0A);
-                }
-                break;
-            case 14: // &
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0E);
-                }
-                break;
-            case 71: // {
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x22);
-                }
-                break;
-            case 72: // }
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x23);
-                }
-                break;
-            case 73: // \
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x5D);
-                }
-                break;
-            case 74: // |
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x69);
-                }
-                break;
-            case 68: // `
-                if (event.isShiftPressed()) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x40);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x4E);
-                } else {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x40);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x51);
-                }
-                break;
-        }
-    }
 
 
-    /**
-     * Translate special PLATO softkey presses and send out appropriate keys.
-     * events.
-     *
-     * @param keyCode the intercepted keycode, less than 0.
-     */
-    private void doSoftKeyDown(int keyCode) {
-        switch (keyCode) {
-            case PLATOKey.SOFTKEY_ANS:   // ANS
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x12);
-            case PLATOKey.SOFTKEY_BACK:   // BACK
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x38);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x18);
-                break;
-            case PLATOKey.SOFTKEY_COPY:   // COPY
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x1B);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3B);
-                break;
-            case PLATOKey.SOFTKEY_DATA:   // DATA
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x39);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x19);
-                break;
-            case PLATOKey.SOFTKEY_EDIT:   // EDIT
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x37);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x17);
-                break;
-            case PLATOKey.SOFTKEY_FONT:   // FONT
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x34);
-                break;
-            case PLATOKey.SOFTKEY_HELP:   // HELP
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x35);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x15);
-                break;
-            case PLATOKey.SOFTKEY_LAB:   // LAB
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3D);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x1D);
-                break;
-            case PLATOKey.SOFTKEY_MICRO:   // MICRO
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x14);
-                break;
-            case -20:   // SQUARE
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x1C);
-                break;
-            case PLATOKey.SOFTKEY_TERM:   // TERM
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x32);
-                break;
-            case PLATOKey.SOFTKEY_SUPER:   // SUPER
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x30);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x10);
-                break;
-            case PLATOKey.SOFTKEY_SUB:   // SUB
-                if (keyboardIsShifted)
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x31);
-                else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x11);
-                break;
-            case PLATOKey.SOFTKEY_STOP:   // STOP
-                if (keyboardIsShifted) {
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3A);
-                } else
-                    mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x1A);
-                break;
-            case PLATOKey.SOFTKEY_LT:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x20);
-                break;
-            case PLATOKey.SOFTKEY_GT:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x21);
-                break;
-            case PLATOKey.SOFTKEY_LEFT_BRACKET:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x22);
-                break;
-            case PLATOKey.SOFTKEY_RIGHT_BRACKET:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x23);
-                break;
-            case PLATOKey.SOFTKEY_DOLLAR:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x24);
-                break;
-            case PLATOKey.SOFTKEY_PERCENT:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x25);
-                break;
-            case PLATOKey.SOFTKEY_UNDERLINE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x26);
-                break;
-            case PLATOKey.SOFTKEY_APOSTROPHE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x27);
-                break;
-            case PLATOKey.SOFTKEY_ASTERISK:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x28);
-                break;
-            case PLATOKey.SOFTKEY_LEFT_PAREN:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x29);
-                break;
-            case PLATOKey.SOFTKEY_RIGHT_PAREN:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x7B);
-                break;
-            case PLATOKey.SOFTKEY_AT:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x05);
-                break;
-            case PLATOKey.SOFTKEY_POUND:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x24);
-                break;
-            case PLATOKey.SOFTKEY_CARET:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x40);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0A);
-                break;
-            case PLATOKey.SOFTKEY_AMPERSAND:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0E);
-                break;
-            case PLATOKey.SOFTKEY_LEFT_BRACE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x22);
-                break;
-            case PLATOKey.SOFTKEY_RIGHT_BRACE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x23);
-                break;
-            case PLATOKey.SOFTKEY_BACKSLASH:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x5D);
-                break;
-            case PLATOKey.SOFTKEY_VERTICAL_BAR:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x69);
-                break;
-            case PLATOKey.SOFTKEY_GRAVE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x40);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x51);
-                break;
-            case PLATOKey.SOFTKEY_TILDE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x40);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x3C);
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x4E);
-                break;
-            case PLATOKey.SOFTKEY_DIVIDE:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0B);
-                break;
-            case PLATOKey.SOFTKEY_MINUS:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0F);
-                break;
-            case PLATOKey.SOFTKEY_PLUS:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0E);
-                break;
-            case PLATOKey.SOFTKEY_MULTIPLY:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0A);
-                break;
-            case PLATOKey.SOFTKEY_TAB:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0C);
-                break;
-            case PLATOKey.SOFTKEY_ASSIGN:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x0d);
-                break;
-            case PLATOKey.SOFTKEY_SIGMA:
-                mService.getPlatoTerminal().getProtocol().sendProcessedKey(0x2E);
-        }
-
-        if (currentKeyboardState == currentKeyboard.SYMBOLS) {
-            mKeyboardSym.setShifted(false);
-            mKeyboard.setShifted(false);
-            mKeyboardView.setShifted(false);
-            mKeyboardView.setKeyboard(mKeyboard);
-            keyboardIsShifted = false;
-            currentKeyboardState = currentKeyboard.ALPHA;
-        }
-
-    }
-
-    /**
-     * The current keyboard active:
-     * ALPHA: alphanumweric keyboard
-     * ALPHA_SHIFTED alphanumeric keyboard + SHIFT
-     * PLATOKEYS Show the PLATO keys
-     */
-    private enum currentKeyboard {
-        ALPHA, ALPHA_SHIFTED, SYMBOLS
-    }
 }
