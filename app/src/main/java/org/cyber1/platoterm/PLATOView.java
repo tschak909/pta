@@ -45,10 +45,6 @@ public class PLATOView extends View {
 
     private void init(AttributeSet attrs, int defStyle) {
 
-        if (mBitmap == null) {
-            mBitmap = Bitmap.createBitmap(WIDTH, HEIGHT, BITMAP_CONFIG);
-        }
-
         if (attrs != null) {
             Log.d("PLATOActivity", "PLATOView init called with attrs " + attrs.toString());
         }
@@ -79,6 +75,14 @@ public class PLATOView extends View {
 
     }
 
+    /**
+     * Set the view's bitmap to the appropriate PLATOTerminal bitmap
+     *
+     * @param bitmap the appropriate PLATOTerminal bitmap
+     */
+    public void setBitmap(Bitmap bitmap) {
+        this.mBitmap = bitmap;
+    }
 }
 
 

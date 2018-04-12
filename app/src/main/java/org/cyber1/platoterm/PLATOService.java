@@ -153,7 +153,7 @@ public class PLATOService extends Service {
      * Process data to and from socket, until we are told to disconnect.
      */
     private void doIO() {
-        byte b;
+        byte b = 0;
         byte lastb = 0;
         setRunning(true);
         while (isRunning()) {
@@ -197,7 +197,7 @@ public class PLATOService extends Service {
 
     public void start() {
         connectToPLATO(DEFAULT_HOST, PROTOCOL_MODE_ASCII);
-
+        platoTerminal.start();
     }
 
     public void disconnectFromPLATO() {

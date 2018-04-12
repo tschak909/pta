@@ -145,7 +145,6 @@ public class PLATOActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         Log.i("PLATOActivity", "ONSTOP!!!");
-        mService.disconnectFromPLATO();
         unbindService(mConnection);
         mBound = false;
     }
@@ -164,6 +163,7 @@ public class PLATOActivity extends AppCompatActivity {
 
         mVisible = true;
         mContentView = (PLATOView) findViewById(R.id.fullscreen_content);
+        mContentView.setBitmap(mService.getPlatoTerminal().getBitmap());
         mKeyboardView = (KeyboardView) findViewById(R.id.keyboard_view);
 
         mKeyboardView.setKeyboard(mKeyboardHandler.mKeyboard);

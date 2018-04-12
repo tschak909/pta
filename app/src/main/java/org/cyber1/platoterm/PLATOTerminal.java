@@ -7,6 +7,7 @@ package org.cyber1.platoterm;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Handler;
 import android.util.Log;
 
 /**
@@ -132,6 +133,26 @@ public class PLATOTerminal {
      */
     private boolean reverseWritingMode;
 
+    /**
+     * This is a handler for pulling the latest data from the network service
+     */
+    private final Handler networkHandler = new Handler();
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Protocol Runnable - Gather data from Network.
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    private final Runnable networkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (service != null && service.isRunning() && !service.getFromFIFO().isEmpty()) {
+                for (int i = 0; i < service.getFromFIFO().size(); i++) {
+                    protocol.decodeByte(service.getFromFIFO().poll());
+                }
+            }
+            networkHandler.post(networkRunnable);
+        }
+    };
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Constructor
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,6 +183,13 @@ public class PLATOTerminal {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Start
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    public void start() {
+        networkHandler.post(networkRunnable);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     // Accessors
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -172,6 +200,15 @@ public class PLATOTerminal {
      */
     public PLATOService getService() {
         return service;
+    }
+
+    /**
+     * Retrieve the Terminal Bitmap
+     *
+     * @return The PLATOTerminal's Bitmap
+     */
+    public Bitmap getBitmap() {
+        return mBitmap;
     }
 
     /**
