@@ -18,10 +18,10 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class PLATONetworkService extends Service {
+public class PLATOService extends Service {
     public static final int BUFFER_SIZE = 3000;
     public static final int BUFFER_SIZE_ON = BUFFER_SIZE / 8;
-    private static final String DEFAULT_HOST = "ataricyber";
+    private static final String DEFAULT_HOST = "irata.online";
     private static final int PROTOCOL_MODE_ASCII = 8005;
     private final IBinder mBinder = new PLATONetworkBinder();
     private boolean flowStopped = false;
@@ -40,7 +40,10 @@ public class PLATONetworkService extends Service {
         }
     };
 
-    public PLATONetworkService() {
+    private PLATOTerminal platoTerminal;
+
+    public PLATOService() {
+        platoTerminal = new PLATOTerminal(this);
     }
 
     public InputStream getIs() {
@@ -89,6 +92,15 @@ public class PLATONetworkService extends Service {
 
     public void setRunning(boolean mRunning) {
         this.mRunning = mRunning;
+    }
+
+    /**
+     * Return PLATOTerminal attached to this service
+     *
+     * @return the PLATOTerminal attached to this service
+     */
+    public PLATOTerminal getPlatoTerminal() {
+        return platoTerminal;
     }
 
     @Override
@@ -213,8 +225,8 @@ public class PLATONetworkService extends Service {
     }
 
     class PLATONetworkBinder extends Binder {
-        PLATONetworkService getService() {
-            return PLATONetworkService.this;
+        PLATOService getService() {
+            return PLATOService.this;
         }
     }
 }

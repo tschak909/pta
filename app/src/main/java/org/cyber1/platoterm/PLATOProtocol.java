@@ -5,7 +5,6 @@
 package org.cyber1.platoterm;
 
 import android.util.Log;
-import android.widget.Toast;
 
 import org.jetbrains.annotations.Contract;
 
@@ -79,12 +78,10 @@ class PLATOProtocol {
     private static final int EXT_CWS_TERMSAVE = 2000;
     private static final int EXT_CWS_TERMRESTORE = 2001;
     private static final byte ASCII_NUL = 0x00;
-    private final PLATORam platoRAM;
-    private final PLATOFont platoFont;
     private String protocolError;
     private boolean dumbTerminal;
     private boolean decoded;
-    private PLATOActivity platoActivity;
+    private PLATOTerminal platoTerminal;
     private boolean escape;
     private ascState currentAscState;
     private int ascBytes; // Byte counter for complex commands.
@@ -122,24 +119,21 @@ class PLATOProtocol {
     private int fontWidth;
     private int fontHeight;
     private int mode4start;
-    private byte lastByte = 0;
 
     /**
      * Constructor for PLATO protocol.
      *
-     * @param platoActivity the main PLATO activity.
+     * @param platoTerminal the main PLATO activity.
      */
-    PLATOProtocol(PLATOActivity platoActivity, PLATORam platoRam, PLATOFont platoFont) {
-        this.platoActivity = platoActivity;
-        this.platoRAM = platoRam;
-        this.platoFont = platoFont;
+    PLATOProtocol(PLATOTerminal platoTerminal) {
+        this.platoTerminal = platoTerminal;
         this.dumbTerminal = true; // Initially bring up in Dumb terminal mode.
         setCurrentAscState(ascState.NONE);
         setAscBytes(0); // Temporary until we get the secondary ascii states done.
-        getRAM().writeRAM(PLATORam.C2ORIGIN, (byte) (PLATORam.M2ADDR & 0xFF));
-        getRAM().writeRAM(PLATORam.C2ORIGIN + 1, (byte) (PLATORam.M2ADDR >> 8));
-        getRAM().writeRAM(PLATORam.C3ORIGIN, (byte) (PLATORam.M3ADDR & 0xFF));
-        getRAM().writeRAM(PLATORam.C3ORIGIN + 1, (byte) (PLATORam.M3ADDR >> 8));
+        getPLATOTerminal().getPLATORam().writeRAM(PLATORam.C2ORIGIN, (byte) (PLATORam.M2ADDR & 0xFF));
+        getPLATOTerminal().getPLATORam().writeRAM(PLATORam.C2ORIGIN + 1, (byte) (PLATORam.M2ADDR >> 8));
+        getPLATOTerminal().getPLATORam().writeRAM(PLATORam.C3ORIGIN, (byte) (PLATORam.M3ADDR & 0xFF));
+        getPLATOTerminal().getPLATORam().writeRAM(PLATORam.C3ORIGIN + 1, (byte) (PLATORam.M3ADDR >> 8));
     }
 
     private ascState getCurrentAscState() {
@@ -162,21 +156,13 @@ class PLATOProtocol {
         return decoded;
     }
 
-    private void setDecoded(boolean decoded) {
-        this.decoded = decoded;
-    }
-
     private boolean isEscape() {
         return escape;
     }
 
-    private void setEscape(boolean escape) {
-        this.escape = escape;
-    }
-
     @Contract(pure = true)
-    private PLATOActivity getPlatoActivity() {
-        return platoActivity;
+    private PLATOTerminal getPLATOTerminal() {
+        return platoTerminal;
     }
 
     /**
@@ -184,7 +170,7 @@ class PLATOProtocol {
      * @param b Byte to decode
      */
     void decodeByte(byte b) {
-        setDecoded(false);
+        decoded = false;
         if (isDumbTerminal()) {
             decodeDumbTerminal(b);
         } else {
@@ -255,9 +241,9 @@ class PLATOProtocol {
                 case LOAD_COORDINATES:
                     Log.d(this.getClass().getName(), "LOAD_COORDINATES pre assemblecoordinate");
                     if (assembleCoordinate(b)) {
-                        getPlatoActivity().setCurrentX(lastCoordinateX);
-                        getPlatoActivity().setCurrentY(lastCoordinateY);
-                        Log.d(getClass().getName(), "load coordinates: " + getPlatoActivity().getCurrentX() + "," + getPlatoActivity().getCurrentY());
+                        getPLATOTerminal().setCurrentX(lastCoordinateX);
+                        getPLATOTerminal().setCurrentY(lastCoordinateY);
+                        Log.d(getClass().getName(), "load coordinates: " + getPLATOTerminal().getCurrentX() + "," + getPLATOTerminal().getCurrentY());
                     }
                     decoded = true;
                     break;
@@ -265,8 +251,7 @@ class PLATOProtocol {
                     int n = assemblePaint(b);
                     if (n != -1) {
                         Log.d(getClass().getName(), "paint " + n);
-                        getPlatoActivity().paint(n);
-                        getPlatoActivity().refreshView();
+                        getPLATOTerminal().paint(n);
                     }
                     decoded = true;
                     break;
@@ -282,7 +267,7 @@ class PLATOProtocol {
                     n = assembleData(b);
                     if (n != -1) {
                         Log.d(this.getClass().getName(), "Load memory address 0x" + String.format("%04X", n));
-                        getRAM().setMAR(n & 0x7FFF);
+                        getPLATOTerminal().getPLATORam().setMAR(n & 0x7FFF);
                     }
                     decoded = true;
                     break;
@@ -294,7 +279,7 @@ class PLATOProtocol {
                     n = assembleData(b);
                     if (n != -1) {
                         Log.d(this.getClass().getName(), "SSF " + n);
-                        getPlatoActivity().activateTouchPanel((n & 0x20) != 0);
+                        // getPLATOTerminal().activateTouchPanel((n & 0x20) != 0);
                     }
                     processSSF(n);
                     decoded = true;
@@ -329,64 +314,58 @@ class PLATOProtocol {
         switch (b) {
             case ASCII_NUL:
                 Log.d(this.getClass().getName(), "Got a NOP. Go sleepies for 8ms...");
-                getPlatoActivity().nullSleep();
+                getPLATOTerminal().nullSleep();
                 decoded = true;
                 break;
             case ASCII_BACKSPACE:
                 Log.d(this.getClass().getName(), "Backspace");
                 decoded = true;
-                getPlatoActivity().backspace();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().backspace();
                 break;
             case ASCII_TAB:
                 Log.d(this.getClass().getName(), "TAB interpreted as space.");
                 decoded = true;
-                getPlatoActivity().forwardspace();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().forwardspace();
                 break;
             case ASCII_LF:
                 Log.d(this.getClass().getName(), "Linefeed");
                 decoded = true;
-                getPlatoActivity().linefeed();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().linefeed();
                 break;
             case ASCII_VT:
                 Log.d(this.getClass().getName(), "Vertical Tab");
                 decoded = true;
-                getPlatoActivity().verticalTab();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().verticalTab();
                 break;
             case ASCII_FF:
                 Log.d(this.getClass().getName(), "Form Feed");
                 decoded = true;
-                getPlatoActivity().formfeed();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().formfeed();
                 break;
             case ASCII_CR:
                 Log.d(this.getClass().getName(), "Carriage Return");
                 decoded = true;
-                getPlatoActivity().carriageReturn();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().carriageReturn();
                 break;
             case ASCII_EM:
-                int mode = ((getRAM().getMode() & 3) + (4 << 2));
+                int mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (4 << 2));
                 Log.d(this.getClass().getName(), "EM - Block write/erase - Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 setModeWords(0);  // Number of words since entring mode
                 decoded = true;
                 break;
             case ASCII_FS:
-                mode = ((getRAM().getMode() & 3));
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3));
                 Log.d(this.getClass().getName(), "FS - Point Plot - Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_GS:
-                mode = ((getRAM().getMode() & 3) + (1 << 2));
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (1 << 2));
                 Log.d(this.getClass().getName(), "GS - Draw Line Load Mode " + mode);
                 currentAscState = ascState.LOAD_COORDINATES;
                 ascBytes = 0;
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_RS:
@@ -395,9 +374,9 @@ class PLATOProtocol {
                 decoded = true;
                 break;
             case ASCII_US:
-                mode = ((getRAM().getMode() & 3) + (3 << 2));
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (3 << 2));
                 Log.d(this.getClass().getName(), "US - Alpha mode - Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
         }
@@ -411,20 +390,18 @@ class PLATOProtocol {
                 decoded = true;
                 break;
             case ASCII_ETX:
-                Toast.makeText(getPlatoActivity().getApplicationContext(), "Exiting PLATO Mode. Dumb Terminal Mode Enabled.", Toast.LENGTH_SHORT).show();
                 dumbTerminal = true;
                 decoded = true;
                 break;
             case ASCII_FF:
                 Log.d(this.getClass().getName(), "Erasing screen.");
-                getPlatoActivity().eraseScreen();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().erase();
                 decoded = true;
                 break;
             case ASCII_SYN:
                 Log.d(this.getClass().getName(), "Setting XOR mode.");
-                getRAM().setMode((getRAM().getMode() & ~3) + 2);
-                getPlatoActivity().setXORMode(true);
+                getPLATOTerminal().getPLATORam().setMode((getPLATOTerminal().getPLATORam().getMode() & ~3) + 2);
+                getPLATOTerminal().setModeXOR(true);
                 decoded = true;
                 break;
             case ASCII_DC1:
@@ -433,8 +410,8 @@ class PLATOProtocol {
             case ASCII_DC4:
                 // inverse, write, erase, rewrite
                 Log.d(this.getClass().getName(), "Setting explicit mode " + ascMode[b - ASCII_DC1]);
-                getPlatoActivity().setXORMode(false);
-                getRAM().setMode((getRAM().getMode() & ~3) + ascMode[b - ASCII_DC1]);
+                getPLATOTerminal().setModeXOR(false);
+                getPLATOTerminal().getPLATORam().setMode((getPLATOTerminal().getPLATORam().getMode() & ~3) + ascMode[b - ASCII_DC1]);
                 decoded = true;
                 break;
             case ASCII_2:
@@ -467,45 +444,45 @@ class PLATOProtocol {
                 // Select current character set memory
                 int i = b - ASCII_B;
                 Log.d(this.getClass().getName(), "Select character memory #" + i);
-                getPlatoActivity().setCurrentCharacterSet(i);
+                getPLATOTerminal().setCurrentCharacterSet(i);
                 decoded = true;
                 break;
             case ASCII_J:
                 Log.d(this.getClass().getName(), "Horizontal Writing Mode");
-                getPlatoActivity().setVerticalWritingMode(false);
+                getPLATOTerminal().setVerticalWritingMode(false);
                 decoded = true;
                 break;
             case ASCII_K:
                 Log.d(this.getClass().getName(), "Vertical writing mode");
-                getPlatoActivity().setVerticalWritingMode(true);
+                getPLATOTerminal().setVerticalWritingMode(true);
                 decoded = true;
                 break;
             case ASCII_L:
                 Log.d(this.getClass().getName(), "Forward writing mode");
-                getPlatoActivity().setReverseWritingMode(false);
+                getPLATOTerminal().setReverseWritingMode(false);
                 decoded = true;
                 break;
             case ASCII_M:
                 Log.d(this.getClass().getName(), "Reverse writing mode");
-                getPlatoActivity().setReverseWritingMode(true);
+                getPLATOTerminal().setReverseWritingMode(true);
                 decoded = true;
                 break;
             case ASCII_N:
                 Log.d(this.getClass().getName(), "Normal size writing mode");
-                getPlatoActivity().setBoldWritingMode(false);
+                getPLATOTerminal().setBoldWritingMode(false);
                 decoded = true;
                 break;
             case ASCII_O:
                 Log.d(this.getClass().getName(), "Bold size writing mode");
-                getPlatoActivity().setBoldWritingMode(true);
+                getPLATOTerminal().setBoldWritingMode(true);
                 decoded = true;
                 break;
             case ASCII_P:
                 // Implementing as is from pterm, we'll see if this works.
-                getPlatoActivity().setXORMode(false);
-                int mode = ((getRAM().getMode() & 3) + (2 << 2));
+                getPLATOTerminal().setModeXOR(false);
+                int mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (2 << 2));
                 Log.d(this.getClass().getName(), "Load mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_Q:
@@ -521,31 +498,31 @@ class PLATOProtocol {
                 decoded = true;
                 break;
             case ASCII_S:
-                platoActivity.setXORMode(false);
-                mode = ((getRAM().getMode() & 3) + (2 << 2));
+                platoTerminal.setModeXOR(false);
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (2 << 2));
                 Log.d(this.getClass().getName(), "Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_T:
-                platoActivity.setXORMode(false);
-                mode = ((getRAM().getMode() & 3) + (5 << 2));
+                platoTerminal.setModeXOR(false);
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (5 << 2));
                 Log.d(this.getClass().getName(), "Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_U:
-                platoActivity.setXORMode(false);
-                mode = ((getRAM().getMode() & 3) + (6 << 2));
+                platoTerminal.setModeXOR(false);
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (6 << 2));
                 Log.d(this.getClass().getName(), "Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_V:
-                platoActivity.setXORMode(false);
-                mode = ((getRAM().getMode() & 3) + (7 << 2));
+                platoTerminal.setModeXOR(false);
+                mode = ((getPLATOTerminal().getPLATORam().getMode() & 3) + (7 << 2));
                 Log.d(this.getClass().getName(), "Load Mode " + mode);
-                getRAM().setMode(mode);
+                getPLATOTerminal().getPLATORam().setMode(mode);
                 decoded = true;
                 break;
             case ASCII_W:
@@ -568,8 +545,8 @@ class PLATOProtocol {
                 decoded = true;
                 break;
             case ASCII_Z:
-                Log.d(this.getClass().getName(), "Set X margin to " + getPlatoActivity().getCurrentX());
-                getPlatoActivity().setMargin(getPlatoActivity().getCurrentX());
+                Log.d(this.getClass().getName(), "Set X margin to " + getPLATOTerminal().getCurrentX());
+                getPLATOTerminal().setMargin(getPLATOTerminal().getCurrentX());
                 decoded = true;
                 break;
             case ASCII_a:
@@ -598,7 +575,7 @@ class PLATOProtocol {
                 break;
             default:
                 setProtocolError("Unknown ESCAPE sequence: " + b);
-                setDecoded(false);
+                decoded = false;
                 break;
         }
     }
@@ -687,7 +664,7 @@ class PLATOProtocol {
     private void sendEXT(int key) {
         int[] data = new int[3];
 
-        if (!getPlatoActivity().getNetworkService().isRunning()) {
+        if (!getPLATOTerminal().getService().isRunning()) {
             Log.d(this.getClass().getName(), "sendEXT called when network service not running.");
             return;
         }
@@ -697,7 +674,7 @@ class PLATOProtocol {
         data[2] = 0x68 | ((key >> 6) & 0x03);
         for (int i = 0; i < 3; i++) {
             Log.d(this.getClass().getName(), "sendEXT sent byte to PLATO." + data[i]);
-            getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
+            getPLATOTerminal().getService().getToFIFO().add((byte) data[i]);
         }
     }
 
@@ -710,7 +687,7 @@ class PLATOProtocol {
             int c = (a & 0xff) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
             if (getCurrentAscState() == ascState.GSFG) {
                 Log.d(this.getClass().getName(), "set grayscale foreground color: " + c);
-                getPlatoActivity().setCurrentFG(String.format("#%08X", c));
+                getPLATOTerminal().setDrawingColorFG(c);
             }
         }
     }
@@ -749,10 +726,10 @@ class PLATOProtocol {
             Log.d(this.getClass().getName(), "color assembled to r: " + (r & 0xFF) + " g: " + (g & 0xFF) + " b: " + (b & 0xFF));
             if (currentAscState == ascState.FG) {
                 Log.d(getClass().getName(), "color Setting foreground to: " + String.format("#%06X", (c)));
-                getPlatoActivity().setCurrentFG(String.format("#%06X", c));
+                getPLATOTerminal().setDrawingColorFG(c);
             } else {
                 Log.d(getClass().getName(), "color Setting background to: " + String.format("#%06X", (c)));
-                getPlatoActivity().setCurrentBG(String.format("#%06X", c));
+                getPLATOTerminal().setDrawingColorBG(c);
             }
         }
         if (ascBytes == 4) {
@@ -771,7 +748,7 @@ class PLATOProtocol {
         if (ascBytes == 0) {
             assembler = 0;
         }
-        assembler |= ((b & 077) << (ascBytes * 6));
+        assembler |= ((b & 63) << (ascBytes * 6));
         if (++ascBytes == 4) {
             Log.d(this.getClass().getName(), "Assembled colorbyte #" + String.format("%06X", assembler));
             return assembler;
@@ -800,7 +777,7 @@ class PLATOProtocol {
                 break;
             default:
                 Log.d(this.getClass().getName(), "SSF " + n);
-                getPlatoActivity().activateTouchPanel((n & 0x20) != 0);
+//                getPLATOTerminal().activateTouchPanel((n & 0x20) != 0);
                 break;
         }
     }
@@ -815,10 +792,10 @@ class PLATOProtocol {
             case -1:
                 break;
             case EXT_CWS_TERMSAVE:
-                getPlatoActivity().cwsTermSave();
+//                getPLATOTerminal().cwsTermSave();
                 break;
             case EXT_CWS_TERMRESTORE:
-                getPlatoActivity().cwsTermRestore();
+//                getPLATOTerminal().cwsTermRestore();
                 break;
             default:
                 processNonCWSExt(getCWSMode(), n);
@@ -845,14 +822,14 @@ class PLATOProtocol {
         if (getAscBytes() == 0) {
             assembler = 0;
         }
-        assembler |= ((b & 077) << (ascBytes * 6));
+        assembler |= ((b & 63) << (ascBytes * 6));
         if (++ascBytes == 3) {
             ascBytes = 0;
             currentAscState = ascState.NONE;
             Log.d(this.getClass().getName(), "assembleData finished: Final word: " + String.format("%X", assembler));
             return assembler;
         } else {
-            Log.d(this.getClass().getName(), "assembleData proceeding: Byte: 0x" + String.format("%02X", b & 077) + " " + String.format("%X", assembler));
+            Log.d(this.getClass().getName(), "assembleData proceeding: Byte: 0x" + String.format("%02X", b & 63) + " " + String.format("%X", assembler));
         }
         return -1;
     }
@@ -877,11 +854,10 @@ class PLATOProtocol {
                 break;
             case 0x7b:
                 // Beep
-                getPlatoActivity().beep();
                 break;
             case 0x7d:
                 // Report memory address register.
-                n = getRAM().getMAR();
+                n = getPLATOTerminal().getPLATORam().getMAR();
                 Log.d(this.getClass().getName(), "load Report MAR: " + n);
                 break;
             case 0x52:
@@ -904,16 +880,6 @@ class PLATOProtocol {
             // Beep does not send a reply.
             Log.d(this.getClass().getName(), "Beep. Not sending reply.");
         }
-//        if (getPlatoActivity().getNetworkService() != null && getPlatoActivity().getNetworkService().isRunning()) {
-//            n += 0x80;
-//            if (getPlatoActivity().getNetworkService().getToFIFO().size() > PLATONetworkService.BUFFER_SIZE_XOFF1) {
-//                Log.d(this.getClass().getName(), "Pending echo: " + n + "  Previous was: " + getPendingEcho());
-//                setPendingEcho(n);
-//            } else {
-//                sendProcessedKey(n);
-//                setPendingEcho(-1);
-//            }
-//        }
         n += 0x80;
         Log.d(this.getClass().getName(), "Sending echo key " + String.format("%02X", n));
         sendProcessedKey(n);
@@ -929,7 +895,7 @@ class PLATOProtocol {
         int[] data = new int[5];
         int len = 1;
 
-        if (getPlatoActivity().getNetworkService() == null || !getPlatoActivity().getNetworkService().isRunning()) {
+        if (getPLATOTerminal().getService() == null || !getPLATOTerminal().getService().isRunning()) {
             // Connection isn't there anymore, just return.
             return;
         }
@@ -977,7 +943,7 @@ class PLATOProtocol {
                 Log.d(this.getClass().getName(), "Double key to PLATO " + data[0] + " " + (data[1] & 0xff));
             }
             for (int i = 0; i < len; i++) {
-                getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
+                getPLATOTerminal().getService().getToFIFO().add((byte) data[i]);
             }
         } else if (!isDumbTerminal()) {
             // Ok, the constant referenced here resolves to o01607 (WTF?!)
@@ -1001,14 +967,14 @@ class PLATOProtocol {
                 Log.d(this.getClass().getName(), "ASCII mode key to PLATO " + (data[0] & 0xFF) + " " + (data[1] & 0xFF) + " " + (data[2] & 0xFF));
             }
             for (int i = 0; i < len; i++) {
-                getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
+                getPLATOTerminal().getService().getToFIFO().add((byte) data[i]);
             }
         } else {
             data[0] = n >> 7;
             data[1] = 0x80 | n;
             len = 2;
             for (int i = 0; i < len; i++) {
-                getPlatoActivity().getNetworkService().getToFIFO().add((byte) data[i]);
+                getPLATOTerminal().getService().getToFIFO().add((byte) data[i]);
             }
 
         }
@@ -1043,7 +1009,7 @@ class PLATOProtocol {
      * @param b byte to pass to modes 0-7
      */
     private void processModes(byte b) {
-        switch (getRAM().getMode() >> 2) {
+        switch (getPLATOTerminal().getPLATORam().getMode() >> 2) {
             case 0:  // Dot mode
                 Log.d(this.getClass().getName(), "mode0 pre assemblecoordinate");
                 if (assembleCoordinate(b)) {
@@ -1106,7 +1072,7 @@ class PLATOProtocol {
         Log.d(this.getClass().getName(), "out char: " + String.format("%c", b));
         currentAscState = ascState.NONE;
         ascBytes = 0;
-        int i = getPlatoActivity().getCurrentCharacterSet();
+        int i = getPLATOTerminal().getCurrentCharacterSet();
         if (i == 0) {
             b = (byte) PLATOFont.asciiM0[b];
             i = (b & 0x80) >> 7;
@@ -1118,8 +1084,7 @@ class PLATOProtocol {
         }
         if (b != (byte) 0xff) {
             b &= 0x7F;
-            getPlatoActivity().drawChar(i, b);
-            getPlatoActivity().refreshView();
+            getPLATOTerminal().drawChar(getPLATOTerminal().getCurrentX(), getPLATOTerminal().getCurrentY(), i, b, false);
         }
     }
 
@@ -1129,7 +1094,7 @@ class PLATOProtocol {
      * @param n data word
      */
     private void mode7(int n) {
-
+        Log.d(this.getClass().getName(), "mode7: Parameter: " + n);
     }
 
     /**
@@ -1138,7 +1103,7 @@ class PLATOProtocol {
      * @param n data word
      */
     private void mode6(int n) {
-
+        Log.d(this.getClass().getName(), "mode6: Parameter: " + n);
     }
 
     /**
@@ -1147,7 +1112,7 @@ class PLATOProtocol {
      * @param n data word
      */
     private void mode5(int n) {
-
+        Log.d(this.getClass().getName(), "mode5: Parameter: " + n);
     }
 
     /**
@@ -1169,9 +1134,9 @@ class PLATOProtocol {
 
         Log.d(this.getClass().getName(), "mode4 block erase X1: " + x1 + " Y1: " + x1 + " X2: " + x2 + " Y2: " + y2);
         // todo: add ignore delay.
-        getPlatoActivity().eraseBlock(x1, y1, x2, y2);
-        getPlatoActivity().setCurrentX(x1);
-        getPlatoActivity().setCurrentY(y1 - 15);
+        getPLATOTerminal().erase(x1, y1, x2, y2);
+        getPLATOTerminal().setCurrentX(x1);
+        getPLATOTerminal().setCurrentY(y1 - 15);
     }
 
     /**
@@ -1184,30 +1149,30 @@ class PLATOProtocol {
         int mar;
         int origin;
 
-        getRAM().writeRAM(getRAM().getMAR(), (byte) (n & 0xFF));
-        getRAM().writeRAM(getRAM().getMAR() + 1, (byte) ((n >> 8) & 0xFF));
+        getPLATOTerminal().getPLATORam().writeRAM(getPLATOTerminal().getPLATORam().getMAR(), (byte) (n & 0xFF));
+        getPLATOTerminal().getPLATORam().writeRAM(getPLATOTerminal().getPLATORam().getMAR() + 1, (byte) ((n >> 8) & 0xFF));
 
         // translate PPT ram address to character memory address
-        mar = getRAM().getMAR();
-        origin = getRAM().readRAMW(PLATORam.C2ORIGIN);
+        mar = getPLATOTerminal().getPLATORam().getMAR();
+        origin = getPLATOTerminal().getPLATORam().readRAMW(PLATORam.C2ORIGIN);
         chaddr = mar - origin;
         if (chaddr < 0 || chaddr > 127 * 16) {
-            Log.d(this.getClass().getName(), "mode2 - memdata 0x" + String.format("%04X", n & 0xffff) + " to addr 0x" + String.format("%04X", getRAM().getMAR()));
+            Log.d(this.getClass().getName(), "mode2 - memdata 0x" + String.format("%04X", n & 0xffff) + " to addr 0x" + String.format("%04X", getPLATOTerminal().getPLATORam().getMAR()));
         } else {
             chaddr /= 2;
             if (((n >> 16) & 3) == 0) {
                 // Load data
                 if (chaddr < 0x200) {
                     Log.d(this.getClass().getName(), "mode2 - M2 load - character memdata " + String.format("%04X", n & 0xffff) + " to charword: " + String.format("%04X", chaddr));
-                    getPlatoFont().getPlato_m2()[chaddr] = n & 0xFFFF;
+                    getPLATOTerminal().getPlatoFont().getPlato_m2()[chaddr] = n & 0xFFFF;
                 } else {
                     Log.d(this.getClass().getName(), "mode2 - M3 load - character memdata " + String.format("%04X", n & 0xffff) + " to charword: " + String.format("%04X", chaddr));
-                    getPlatoFont().getPlato_m3()[chaddr - 0x0200] = n & 0xFFFF;
+                    getPLATOTerminal().getPlatoFont().getPlato_m3()[chaddr - 0x0200] = n & 0xFFFF;
                 }
                 ++chaddr;
             }
         }
-        getRAM().setMAR(getRAM().getMAR() + 2);
+        getPLATOTerminal().getPLATORam().setMAR(getPLATOTerminal().getPLATORam().getMAR() + 2);
     }
 
     /**
@@ -1221,10 +1186,9 @@ class PLATOProtocol {
         x = (i >> 9) & 0x1FF;
         y = i & 0x1FF;
         Log.d(getClass().getName(), "lineto X:" + x + " Y:" + y);
-        getPlatoActivity().plotLine(getPlatoActivity().getCurrentX(), getPlatoActivity().getCurrentY(), x, y);
-        getPlatoActivity().setCurrentX(x);
-        getPlatoActivity().setCurrentY(y);
-        getPlatoActivity().refreshView();
+        getPLATOTerminal().plotLine(getPLATOTerminal().getCurrentX(), getPLATOTerminal().getCurrentY(), x, y);
+        getPLATOTerminal().setCurrentX(x);
+        getPLATOTerminal().setCurrentY(y);
     }
 
     /**
@@ -1237,10 +1201,9 @@ class PLATOProtocol {
         x = (i >> 9) & 0x1FF;
         y = i & 0x1FF;
         Log.d(this.getClass().getName(), "mode 0 plot x: " + x + " y: " + y);
-        getPlatoActivity().drawPoint(x, y);
-        getPlatoActivity().setCurrentX(x);
-        getPlatoActivity().setCurrentY(y);
-        getPlatoActivity().refreshView();
+        getPLATOTerminal().drawPoint(x, y);
+        getPLATOTerminal().setCurrentX(x);
+        getPLATOTerminal().setCurrentY(y);
     }
 
     /**
@@ -1250,7 +1213,7 @@ class PLATOProtocol {
      * @return true if coordinate is complete, false if coordinate needs another byte.
      */
     private boolean assembleCoordinate(byte b) {
-        int coordinate = b & 037; // Mask off top three bits
+        int coordinate = b & 31; // Mask off top three bits
         Log.d(this.getClass().getName(), "assembleCoordinate: byte: 0x" + String.format("%02X", b) + " coordinate: 0x" + String.format("%02X", coordinate));
         switch (b >> 5) // Get control bits 6 and 7
         {
@@ -1258,16 +1221,16 @@ class PLATOProtocol {
                 if (ascBytes == 0) {
                     // High Y coordinate
                     Log.d(this.getClass().getName(), "assembleCoordinate: High Y coordinate " + coordinate);
-                    lastCoordinateY = (lastCoordinateY & 037) | (coordinate << 5);
+                    lastCoordinateY = (lastCoordinateY & 31) | (coordinate << 5);
                     ascBytes = 0;
                 } else {
                     // High X coordinate
                     Log.d(this.getClass().getName(), "assembleCoordinate: High X coordinate " + coordinate);
-                    lastCoordinateX = (lastCoordinateX & 0x1F) | (coordinate << 5);
+                    lastCoordinateX = (lastCoordinateX & 31) | (coordinate << 5);
                 }
                 break;
             case 2: // Low X
-                lastCoordinateX = (lastCoordinateX & 0740) | coordinate;
+                lastCoordinateX = (lastCoordinateX & 480) | coordinate;
                 ascBytes = 0;
                 currentAscState = ascState.NONE;
                 Log.d(this.getClass().getName(), "assembleCoordinate: Low X coordinate: " + coordinate + " - lastx: " + lastCoordinateX + " - lasty: " + lastCoordinateY);
@@ -1300,7 +1263,6 @@ class PLATOProtocol {
                 dumbTerminal = false;
                 escape = false;
                 setFlowControl(false);
-                Toast.makeText(getPlatoActivity().getApplicationContext(), "PLATO Connection Established", Toast.LENGTH_SHORT).show();
                 decoded = true;
             }
         } else if (b == ASCII_ETX) {
@@ -1313,14 +1275,13 @@ class PLATOProtocol {
                 decoded = true;
             }
         } else if (b == ASCII_CR) {
-            getPlatoActivity().setCurrentX(getPlatoActivity().getMargin()); // Beginning of line.
+            getPLATOTerminal().setCurrentX(getPLATOTerminal().getMargin()); // Beginning of line.
             decoded = true;
         } else if (b == ASCII_LF) {
-            if (getPlatoActivity().getCurrentY() != 0)
-                getPlatoActivity().setCurrentY(getPlatoActivity().getCurrentY() - 16);
+            if (getPLATOTerminal().getCurrentY() != 0)
+                getPLATOTerminal().setCurrentY(getPLATOTerminal().getCurrentY() - 16);
             else {
-                getPlatoActivity().scrollUp();
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().scrollUp();
             }
             decoded = true;
         } else if (b >= 32 && b < 127) // Printable character.
@@ -1331,8 +1292,8 @@ class PLATOProtocol {
                 int charsetToUse = (b & 0x80) >> 7;
                 charToPlot &= 0x7F;
                 decoded = true;
-                getPlatoActivity().drawChar(charsetToUse, charToPlot);
-                getPlatoActivity().refreshView();
+                getPLATOTerminal().drawChar(getPLATOTerminal().getCurrentX(), getPLATOTerminal().getCurrentY(), charsetToUse, charToPlot, false);
+
             }
         }
     }
@@ -1490,19 +1451,11 @@ class PLATOProtocol {
         this.fontHeight = fontHeight;
     }
 
-    public PLATORam getRAM() {
-        return platoRAM;
-    }
-
-    public PLATOFont getPlatoFont() {
-        return platoFont;
-    }
-
     public int getMode4start() {
         return mode4start;
     }
 
-    public void setMode4start(int mode4start) {
+    private void setMode4start(int mode4start) {
         this.mode4start = mode4start;
     }
 
