@@ -145,6 +145,7 @@ public class PLATOService extends Service {
             Log.e("PLATOActivity", "TCP Error: ", e);
         }
 
+        platoTerminal.start();
         doIO();
 
     }
@@ -197,7 +198,6 @@ public class PLATOService extends Service {
 
     public void start() {
         connectToPLATO(DEFAULT_HOST, PROTOCOL_MODE_ASCII);
-        platoTerminal.start();
     }
 
     public void disconnectFromPLATO() {

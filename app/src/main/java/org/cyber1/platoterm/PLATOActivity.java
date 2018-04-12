@@ -77,6 +77,7 @@ public class PLATOActivity extends AppCompatActivity {
             PLATOService.PLATONetworkBinder binder = (PLATOService.PLATONetworkBinder) service;
             mService = binder.getService();
             mBound = true;
+            mContentView.setBitmap(mService.getPlatoTerminal().getBitmap());
         }
 
         @Override
@@ -163,7 +164,6 @@ public class PLATOActivity extends AppCompatActivity {
 
         mVisible = true;
         mContentView = (PLATOView) findViewById(R.id.fullscreen_content);
-        mContentView.setBitmap(mService.getPlatoTerminal().getBitmap());
         mKeyboardView = (KeyboardView) findViewById(R.id.keyboard_view);
 
         mKeyboardView.setKeyboard(mKeyboardHandler.mKeyboard);

@@ -741,8 +741,8 @@ public class PLATOTerminal {
 
 
     private void doPaint(int x, int y, int pat) {
-        doPaintWalker(x, y, pat, 0);
-        doPaintWalker(x, y, pat, 1);
+        // doPaintWalker(x, y, pat, 0);
+        // doPaintWalker(x, y, pat, 1);
     }
 
     @SuppressLint("Assert")
