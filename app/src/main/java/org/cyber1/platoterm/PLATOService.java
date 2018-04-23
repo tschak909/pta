@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.io.IOException;
@@ -209,6 +210,16 @@ public class PLATOService extends Service {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Update bitmap via intent
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    void updateBitmap() {
+        Intent intent = new Intent("update-bitmap");
+        intent.putExtra("toggle", true);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     /**

@@ -71,7 +71,8 @@ public class PLATOView extends View {
         mRenderRect.bottom = contentHeight - paddingBottom;
         mRenderRect.right = mRenderRect.left + contentHeight - paddingRight;
 
-        canvas.drawBitmap(mBitmap, null, mRenderRect, null);
+        if (mBitmap != null)
+            canvas.drawBitmap(mBitmap, null, mRenderRect, null);
 
     }
 

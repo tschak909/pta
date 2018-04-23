@@ -173,13 +173,14 @@ public class PLATOTerminal {
         this.verticalWritingMode = false;
         this.boldWritingMode = false;
         this.currentFont = platoFont.getPlato_m0();
-        this.deltaX = 0;
-        this.deltaY = 0;
+        this.deltaX = 8;
+        this.deltaY = 16;
         this.margin = 0;
         this.currentCharacterSet = 0;
         this.reverseWritingMode = false;
         this.mBitmap = Bitmap.createBitmap(WIDTH, HEIGHT, BITMAP_CONFIG);
         this.walkstack = new int[512 * 512 + 2];
+        this.platoRam.setMode(0x0F); // Char mode, rewrite
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -488,6 +489,7 @@ public class PLATOTerminal {
         }
 
         mBitmap.setPixel(x, y, newColor);
+        service.updateBitmap();
     }
 
     /**
@@ -569,6 +571,7 @@ public class PLATOTerminal {
         }
         setModeXOR(savexor);
         getPLATORam().setMode(saveMode);
+        service.updateBitmap();
     }
 
     /**
@@ -737,6 +740,7 @@ public class PLATOTerminal {
         mBitmap.getPixels(temp, 0, WIDTH, 0, 16, 511, 495);
         mBitmap.eraseColor(0);
         mBitmap.setPixels(temp, 0, WIDTH, 0, 0, 511, 495);
+        service.updateBitmap();
     }
 
 
@@ -796,6 +800,7 @@ public class PLATOTerminal {
                         // Plain flood fill.
                         currentPaintPixel = drawingColorFG;
                         mBitmap.setPixel(x, y, currentPaintPixel);
+                        service.updateBitmap();
                     } else {
                         // Mark pixel by setting alpha to zero
                         int r = Color.red(currentPaintPixel);
@@ -803,6 +808,7 @@ public class PLATOTerminal {
                         int b = Color.blue(currentPaintPixel);
                         currentPaintPixel = Color.argb(0, r, g, b);
                         mBitmap.setPixel(x, y, currentPaintPixel);
+                        service.updateBitmap();
                     }
                     pixels++;
                     if (x > 0) {

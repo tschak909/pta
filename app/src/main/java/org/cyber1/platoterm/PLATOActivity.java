@@ -5,9 +5,11 @@
 package org.cyber1.platoterm;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.inputmethodservice.KeyboardView;
 import android.media.Ringtone;
@@ -17,6 +19,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -77,7 +80,6 @@ public class PLATOActivity extends AppCompatActivity {
             PLATOService.PLATONetworkBinder binder = (PLATOService.PLATONetworkBinder) service;
             mService = binder.getService();
             mBound = true;
-            mContentView.setBitmap(mService.getPlatoTerminal().getBitmap());
         }
 
         @Override
@@ -296,6 +298,28 @@ public class PLATOActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
+    private int updateCounter;
+    /**
+     * Receive update-bitmap messages from service
+     */
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            updateCounter++;
+            mContentView.setBitmap(mService.getPlatoTerminal().getBitmap());
+        }
+    };
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("update-bitmap"));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+    }
 
 }
